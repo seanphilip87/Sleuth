@@ -29,7 +29,7 @@
 
         #game-container {
             width: 100%;
-            max-width: 600px;
+            max-width: 650px;
             height: 100%;
             display: flex;
             flex-direction: column;
@@ -47,24 +47,22 @@
         }
 
         .map-room {
-            height: 40px;
+            height: 45px;
             background-color: #1a1a1a;
             color: #333;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
-            text-transform: uppercase;
+            font-size: 10px;
+            line-height: 1.1;
             text-align: center;
-            letter-spacing: 1px;
+            padding: 2px;
             border: 1px solid #333;
             font-weight: bold;
+            word-wrap: break-word;
         }
 
-        .map-room.visited {
-            color: #888;
-        }
-
+        .map-room.visited { color: #888; }
         .map-room.active {
             background-color: #0a1a2a;
             border-color: var(--accent-color);
@@ -77,23 +75,25 @@
             flex-grow: 1;
             overflow-y: auto;
             padding: 15px;
-            font-size: 15px;
-            line-height: 1.5;
+            font-size: 14px;
+            line-height: 1.6;
             background: linear-gradient(to bottom, #0a0a0a, #111);
         }
 
         .output-line {
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             animation: fadeIn 0.3s ease-in;
         }
 
         .system-msg { color: #888; font-style: italic; }
+        .tutorial-msg { color: #00ff88; font-weight: normal; border-left: 2px solid #00ff88; padding-left: 10px;}
         .room-title { color: var(--accent-color); font-weight: bold; text-transform: uppercase; margin-top: 15px; border-bottom: 1px solid #333; display: inline-block;}
         .danger-msg { color: var(--danger-color); font-weight: bold; }
         .suspect-name { color: #fff; font-weight: bold; }
+        .dialogue { color: #ccc; }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
+            from { opacity: 0; transform: translateY(3px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -111,11 +111,11 @@
 
         button {
             flex: 1 1 calc(50% - 8px);
-            background-color: transparent;
+            background-color: #0a0a0a;
             color: var(--accent-color);
             border: 1px solid var(--accent-color);
-            padding: 14px 10px;
-            font-size: 14px;
+            padding: 12px 8px;
+            font-size: 13px;
             text-transform: uppercase;
             font-weight: 600;
             cursor: pointer;
@@ -124,18 +124,9 @@
             user-select: none;
         }
 
-        button:active {
-            background-color: rgba(0, 230, 255, 0.15);
-            transform: scale(0.97);
-        }
-
-        button.danger-btn {
-            color: var(--danger-color);
-            border-color: var(--danger-color);
-        }
-        button.danger-btn:active {
-            background-color: rgba(255, 51, 102, 0.15);
-        }
+        button:active { background-color: rgba(0, 230, 255, 0.15); transform: scale(0.97); }
+        button.danger-btn { color: var(--danger-color); border-color: var(--danger-color); }
+        button.danger-btn:active { background-color: rgba(255, 51, 102, 0.15); }
     </style>
 </head>
 <body>
@@ -146,20 +137,28 @@
     </div>
 
     <script>
-        // --- STATE MANAGEMENT ---
+        // --- GAME DATA & STATE ---
         const config = {
             hasWeapon: false,
             jeopardyTimer: -1,
             murderRoomIndex: -1,
             currentRoomIndex: 0,
+            crimeSceneFound: false,
             isGathered: false,
-            gameOver: false
+            gameOver: false,
+            roomExamines: [0,0,0,0,0,0,0,0,0] // Tracks how many times each room is examined
         };
 
-        const roomNames = [
-            "Server Room", "Home Theater", "Smart Kitchen", 
-            "Zen Garden", "Living Area", "Bio-Hacking Lab", 
-            "Crypto Cave", "Master Suite", "Garage"
+        const roomsData = [
+            { name: "Server Room", desc: "The hum of cooling fans is deafening. Blinking LED lights cast long, nervous shadows across the tangled cables. It smells heavily of ozone and cheap energy drinks." },
+            { name: "Home Theater", desc: "Plush velvet recliners face a massive screen paused on some obscure black-and-white indie film. The faint, stale scent of truffle popcorn lingers in the dark." },
+            { name: "Smart Kitchen", desc: "A sterile, stainless-steel nightmare. An unsettling AI refrigerator hums softly, occasionally judging your dietary choices via a digital display." },
+            { name: "Zen Garden", desc: "Perfectly raked sand and a trickling bamboo water feature. It's jarringly peaceful, completely at odds with the tension in the rest of the house." },
+            { name: "Living Area", desc: "Cold, minimalist furniture and impossibly sharp glass tables. It looks like a magazine cover, utterly devoid of human warmth or comfort." },
+            { name: "Bio Lab", desc: "Centrifuges, empty IV drip bags, and unnervingly bright surgical lights. Whatever 'health optimization' was happening here, it doesn't look strictly legal." },
+            { name: "Crypto Cave", desc: "Six curved monitors display endlessly plummeting red graphs. The floor is littered with empty soda cans and crushed dreams." },
+            { name: "Master Suite", desc: "Silk sheets, overly large mirrors on the ceiling, and the overpowering stench of expensive cologne and deceit." },
+            { name: "Garage", desc: "Echoing acoustics bounce off two matte-black hypercars. A solitary oil stain spreads across the pristine epoxy floor." }
         ];
 
         const suspects = [
@@ -170,38 +169,47 @@
             { name: "Marcus", desc: "Disgruntled AI Engineer", annoyance: 0, isMurderer: false, roomIndex: -1, claimedRoomIndex: -1 }
         ];
 
-        const items = [
-            { name: "Vintage Katana", isWeapon: false, roomIndex: -1 },
-            { name: "Heavy Bronze Award", isWeapon: false, roomIndex: -1 },
-            { name: "3D Printed Firearm", isWeapon: false, roomIndex: -1 },
-            { name: "Broken Server Rack", isWeapon: false, roomIndex: -1 }
+        const allItems = [
+            "Vintage Katana", "Heavy Bronze Award", "3D Printed Firearm", "Broken Server Rack",
+            "Suspiciously Heavy Bonsai Tree", "Jailbroken Smart-Toaster", "Half-drank Soy Latte", 
+            "Signed NDA Document", "Vial of Questionable Supplements", "First Edition Manga",
+            "Hardware Crypto Wallet", "Abstract Marble Sculpture"
         ];
-
+        
+        let items = []; // Will be populated dynamically
         let map = [];
 
         // --- INITIALIZATION ---
         function initGame() {
-            let shuffledNames = roomNames.sort(() => 0.5 - Math.random());
+            // Setup Map
+            let shuffledRooms = roomsData.sort(() => 0.5 - Math.random());
             for (let i = 0; i < 9; i++) {
-                map.push({ name: shuffledNames[i], visited: false, index: i });
+                map.push({ ...shuffledRooms[i], visited: false, index: i });
             }
             
             config.currentRoomIndex = Math.floor(Math.random() * 9);
             map[config.currentRoomIndex].visited = true;
 
+            // Setup Murderer & Weapon
             const murderer = suspects[Math.floor(Math.random() * suspects.length)];
             murderer.isMurderer = true;
-            
-            const weapon = items[Math.floor(Math.random() * items.length)];
-            weapon.isWeapon = true;
-
             config.murderRoomIndex = Math.floor(Math.random() * 9);
 
+            // Setup Items (Pick 6 random items from the list, 1 becomes weapon)
+            let shuffledItems = allItems.sort(() => 0.5 - Math.random()).slice(0, 6);
+            shuffledItems.forEach((name, idx) => {
+                items.push({ 
+                    name: name, 
+                    isWeapon: (idx === 0), // First item in slice is weapon
+                    roomIndex: Math.floor(Math.random() * 9) 
+                });
+            });
+
+            // Setup Suspect Alibis
             suspects.forEach(s => {
                 s.roomIndex = Math.floor(Math.random() * 9);
                 if (s.isMurderer) {
                     let falseRoom = Math.floor(Math.random() * 9);
-                    // Ensure the lie isn't accidentally their actual original room
                     while (falseRoom === s.roomIndex) falseRoom = Math.floor(Math.random() * 9);
                     s.claimedRoomIndex = falseRoom;
                 } else {
@@ -209,12 +217,15 @@
                 }
             });
 
-            items.forEach(i => i.roomIndex = Math.floor(Math.random() * 9));
-
             renderMap();
-            printText('<span class="system-msg">System Online. You are the lead investigator. A high-profile murder has occurred in this smart-mansion. Locate the weapon, find the contradiction, and gather the suspects at the crime scene.</span>');
-            lookRoom();
-            renderBaseControls();
+            
+            // Tutorial / Intro
+            printText('<span class="tutorial-msg"><b>SYSTEM BOOT: SLEUTH OS v2026</b><br><br>You are the lead investigator. The victim is <b>Silas Vance</b>, a tyrannical tech-billionaire whose throat was cut tonight in his own smart-mansion.<br><br><b>YOUR OBJECTIVES:</b><br>1. Explore the house and question the guests. They will tell you where they were. The innocent tell the truth; the killer lies.<br>2. Find the murder scene by repeatedly EXAMINING the rooms.<br>3. Find the murder weapon.<br>4. Only once you have the weapon, gather the suspects at the crime scene and make your accusation.<br><br><i>Beware: If you pick up the murder weapon, the killer will realize you are closing in. You will only have minutes to live.</i></span>');
+            
+            setTimeout(() => {
+                lookRoom(true);
+                renderBaseControls();
+            }, 1000);
         }
 
         // --- UTILITIES ---
@@ -230,20 +241,33 @@
         function advanceTime() {
             if (config.gameOver) return;
 
+            let entered = [];
+            let left = [];
+
             // Suspects wander
             suspects.forEach(s => {
                 if (Math.random() < 0.25 && !config.isGathered) {
-                    s.roomIndex = Math.floor(Math.random() * 9);
+                    let oldRoom = s.roomIndex;
+                    let newRoom = Math.floor(Math.random() * 9);
+                    
+                    if (oldRoom !== newRoom) {
+                        s.roomIndex = newRoom;
+                        if (newRoom === config.currentRoomIndex) entered.push(s.name);
+                        if (oldRoom === config.currentRoomIndex) left.push(s.name);
+                    }
                 }
             });
+
+            if (left.length > 0) printText(`<span class="system-msg">>>> ${left.join(', ')} just left the room.</span>`);
+            if (entered.length > 0) printText(`<span class="system-msg">>>> ${entered.join(', ')} just walked in.</span>`);
 
             // Jeopardy Mechanics
             if (config.hasWeapon) {
                 config.jeopardyTimer--;
-                if (config.jeopardyTimer === 3) printText('<span class="danger-msg">WARNING: Motion sensors detect rapid movement heading your way...</span>');
-                if (config.jeopardyTimer === 1) printText('<span class="danger-msg">WARNING: They are right outside the door! GATHER THEM NOW!</span>');
+                if (config.jeopardyTimer === 4) printText('<span class="danger-msg">WARNING: Motion sensors detect rapid movement heading your way...</span>');
+                if (config.jeopardyTimer === 2) printText('<span class="danger-msg">WARNING: Footsteps echo in the hallway! They are hunting you! GATHER THEM AT THE CRIME SCENE NOW!</span>');
                 if (config.jeopardyTimer <= 0) {
-                    printText('<span class="danger-msg">CRITICAL FAILURE. The murderer found you holding the weapon. You have been eliminated. GAME OVER.</span>');
+                    printText('<span class="danger-msg">CRITICAL FAILURE. The door bursts open. The murderer found you holding the weapon. You have been eliminated. GAME OVER.</span>');
                     config.gameOver = true;
                     document.getElementById('controls').innerHTML = '';
                 }
@@ -254,13 +278,13 @@
         function getSuspectResponse(suspect) {
             if (suspect.annoyance > 3) {
                 const refusals = {
-                    "Julian": "Look, I have a Zoom call. My lawyer said this interrogation is over.",
-                    "Harper": "Honestly, your whole aura is just super negative right now. Talk to my agent.",
-                    "Elias": "You are iterating on the same questions. I will not continue this redundant cycle.",
-                    "Aria": "(Sigh) I'm done. Leave.",
-                    "Marcus": "Syntax error. Access denied. I'm stopping my processes now."
+                    "Julian": "Look, I'm calling my lawyer. This interrogation is over, bro.",
+                    "Harper": "Honestly, your aura is completely toxic right now. Talk to my agent. I'm done.",
+                    "Elias": "You are iterating on the same pointless questions. I will not continue this redundant cycle.",
+                    "Aria": "(Sigh) I'm bored of you. Leave.",
+                    "Marcus": "Syntax error. Access denied. I'm stopping my vocal processes now."
                 };
-                return `<span class="suspect-name">${suspect.name}:</span> "${refusals[suspect.name]}"`;
+                return `<span class="suspect-name">${suspect.name}:</span> <span class="dialogue">"${refusals[suspect.name]}"</span>`;
             }
 
             const stage = suspect.annoyance <= 1 ? "normal" : "irritated";
@@ -268,28 +292,28 @@
             
             const scripts = {
                 "Julian": {
-                    normal: `Bro, I was chilling in the ${claimedRoomName}. Just checking the blockchain.`,
-                    irritated: `Stop wasting my time! For the last time, I was in the ${claimedRoomName}.`
+                    normal: `Honestly? Silas getting flatlined is the best thing for the market. The guy was a parasite. He rugged my last three token launches and laughed about it! I'm not shedding any tears. But if you're asking about my location, I was chilling in the ${claimedRoomName}. Just checking the blockchain, minding my own business.`,
+                    irritated: `Stop wasting my time! For the last time, I was in the ${claimedRoomName}. Check the router logs if you don't believe me!`
                 },
                 "Harper": {
-                    normal: `I was practicing some mindfulness in the ${claimedRoomName}. Major calm vibes.`,
-                    irritated: `Oh my god, you're ruining my alignment. I told you, ${claimedRoomName}. OK?`
+                    normal: `It's a tragedy, obviously, but Silas had a severely blocked sacral chakra. Just terrible, dark energy. He threatened to sue my wellness brand last week, actually. So toxic. Anyway, during the incident, I was practicing some deep mindfulness in the ${claimedRoomName}. Major calm vibes.`,
+                    irritated: `Oh my god, you're ruining my alignment. I told you, I was in the ${claimedRoomName}. OK? Go bother someone else.`
                 },
                 "Elias": {
-                    normal: `I was cataloging samples in the ${claimedRoomName}. An absolute waste of my evening.`,
-                    irritated: `If you must know again, the ${claimedRoomName}. Do try to retain the data this time.`
+                    normal: `Silas Vance was a brilliant checkbook and a mediocre intellect. When he abruptly cut my genomic research funding yesterday, he proved his short-sightedness. His demise is inconvenient, but not devastating. At the time of the... event, I was cataloging samples in the ${claimedRoomName}. An absolute waste of my evening.`,
+                    irritated: `If you must know again, the ${claimedRoomName}. Do try to retain the data this time, investigator.`
                 },
                 "Aria": {
-                    normal: `Whatever. I was in the ${claimedRoomName}. Not that it's any of your business.`,
-                    irritated: `...${claimedRoomName}. Stop talking to me.`
+                    normal: `Silas was my step-brother. He was an arrogant prick who thought he owned the world. Now I inherit his shares, so... oops? I couldn't care less that he's gone. I was in the ${claimedRoomName} when it happened. Not that it's any of your business.`,
+                    irritated: `...${claimedRoomName}. Stop talking to me. You're giving me a headache.`
                 },
                 "Marcus": {
-                    normal: `I was running diagnostics in the ${claimedRoomName}. The network is a mess.`,
-                    irritated: `Look at the server logs! I was in the ${claimedRoomName}. Leave me alone.`
+                    normal: `Silas stole my proprietary neural-net architecture and patented it under his name! The man was a corporate thief. I'm glad somebody finally debugged him permanently. I was running diagnostics in the ${claimedRoomName} when the alarms went off. The network in this house is a mess.`,
+                    irritated: `Look at the server logs! I told you, I was in the ${claimedRoomName}. Leave me alone!`
                 }
             };
             
-            return `<span class="suspect-name">${suspect.name}:</span> "${scripts[suspect.name][stage]}"`;
+            return `<span class="suspect-name">${suspect.name}:</span> <span class="dialogue">"${scripts[suspect.name][stage]}"</span>`;
         }
 
         // --- UI RENDERING ---
@@ -299,33 +323,35 @@
             map.forEach((room, index) => {
                 const div = document.createElement('div');
                 div.className = `map-room ${room.visited ? 'visited' : ''} ${index === config.currentRoomIndex ? 'active' : ''}`;
-                
-                let label = '?';
-                if (room.visited) {
-                    // Create a short 3-letter acronym for the room
-                    label = room.name.split(' ').map(w => w[0]).join('').substring(0,3);
-                }
-                div.innerText = label;
+                div.innerText = room.visited ? room.name : '?';
                 minimap.appendChild(div);
             });
         }
 
-        function lookRoom() {
+        function lookRoom(isInitial = false) {
             const room = map[config.currentRoomIndex];
             room.visited = true;
             renderMap();
 
-            printText(`<div class="room-title">${room.name}</div>`);
+            if (!isInitial) printText(`<div class="room-title">${room.name}</div>`);
+            printText(`<span class="system-msg">${room.desc}</span>`);
             
+            // Creepy hints for murder room
             if (config.currentRoomIndex === config.murderRoomIndex) {
-                printText('<span class="danger-msg">CRIME SCENE DETECTED: Blood pooling on the floor. This is where it happened.</span>');
+                if (config.crimeSceneFound) {
+                    printText('<span class="danger-msg">CRIME SCENE CONFIRMED: A heavy pool of blood stains the floorboards here. This is where Silas Vance was killed.</span>');
+                } else if (config.roomExamines[config.currentRoomIndex] === 1) {
+                    printText('<span class="system-msg" style="color:#aa8800;">Something feels off in here. There is a faint, metallic scent in the air that the smart-thermostat isn\'t filtering out...</span>');
+                } else if (config.roomExamines[config.currentRoomIndex] === 2) {
+                    printText('<span class="system-msg" style="color:#aa8800;">You notice scuff marks on the floor and a knocked-over chair. A struggle happened here.</span>');
+                }
             }
             
             const peopleHere = suspects.filter(s => s.roomIndex === config.currentRoomIndex);
-            if (peopleHere.length > 0) printText(`Individuals present: ${peopleHere.map(s => `<span class="suspect-name">${s.name}</span>`).join(", ")}`);
+            if (peopleHere.length > 0) printText(`Present: ${peopleHere.map(s => `<span class="suspect-name">${s.name}</span>`).join(", ")}`);
 
             const itemsHere = items.filter(i => i.roomIndex === config.currentRoomIndex);
-            if (itemsHere.length > 0) printText(`Scannable items: ${itemsHere.map(i => i.name).join(", ")}`);
+            if (itemsHere.length > 0) printText(`Noticed Items: ${itemsHere.map(i => i.name).join(", ")}`);
         }
 
         // --- CONTROLS ENGINE ---
@@ -338,7 +364,6 @@
             btn.onclick = () => {
                 if (!config.gameOver) {
                     onClick();
-                    advanceTime();
                 }
             };
             controlsDiv.appendChild(btn);
@@ -347,15 +372,16 @@
         function renderBaseControls() {
             if (config.gameOver) return;
             controlsDiv.innerHTML = '';
-            createButton('Look', lookRoom);
+            
             createButton('Move', renderMoveControls);
             
             if (config.isGathered) {
                 createButton('Make Accusation', renderAccuseControls, true);
             } else {
-                createButton('Examine', renderItemControls);
+                createButton('Examine Room', examineRoomObj);
+                createButton('Examine Item', renderItemControls);
                 createButton('Question', renderQuestionControls);
-                if (config.hasWeapon) createButton('GATHER ALL', gatherSuspects, true);
+                if (config.hasWeapon && config.crimeSceneFound) createButton('GATHER ALL', gatherSuspects, true);
             }
         }
 
@@ -375,8 +401,24 @@
         function move(newIndex) {
             config.currentRoomIndex = newIndex;
             config.isGathered = false; 
-            printText('<span class="system-msg">Moving...</span>');
+            printText('<hr>');
+            advanceTime();
             lookRoom();
+            renderBaseControls();
+        }
+
+        function examineRoomObj() {
+            config.roomExamines[config.currentRoomIndex]++;
+            printText(`> You thoroughly search the ${map[config.currentRoomIndex].name}...`);
+            
+            if (config.currentRoomIndex === config.murderRoomIndex && config.roomExamines[config.currentRoomIndex] >= 3 && !config.crimeSceneFound) {
+                config.crimeSceneFound = true;
+                printText('<span class="danger-msg">BINGO! You pull back a rug and find a massive pool of drying blood. You have officially located the CRIME SCENE.</span>');
+            } else {
+                printText('<span class="system-msg">You search the corners, under the furniture, and inspect the walls. Nothing else stands out.</span>');
+            }
+            
+            advanceTime();
             renderBaseControls();
         }
 
@@ -392,22 +434,42 @@
 
             itemsHere.forEach(item => {
                 createButton(item.name, () => {
+                    printText(`> You inspect the ${item.name}...`);
                     if (item.isWeapon) {
-                        printText(`<span class="danger-msg">EVIDENCE ACQUIRED: The ${item.name} is coated in DNA. THE MURDERER KNOWS YOU HAVE IT. YOU HAVE MINUTES TO LIVE. GATHER THEM AT THE CRIME SCENE.</span>`);
-                        config.hasWeapon = true;
-                        config.jeopardyTimer = Math.floor(Math.random() * 5) + 6; // 6 to 10 moves
-                        item.roomIndex = -99; 
+                        printText(`<span class="danger-msg">Wait... there are dark, dried stains on it. DNA match confirmed. THIS IS THE MURDER WEAPON!</span>`);
+                        printText(`<span class="system-msg" style="color:orange">WARNING: If you take this weapon, the killer will realize you have the evidence and hunt you down. You will have a limited time to gather them at the crime scene.</span>`);
+                        
+                        controlsDiv.innerHTML = '';
+                        createButton('TAKE WEAPON', () => { 
+                            takeWeapon(item); 
+                            advanceTime(); 
+                        }, true);
+                        createButton('LEAVE IT', () => { 
+                            printText("<span class='system-msg'>You carefully step away from the weapon, leaving it where it lies.</span>"); 
+                            advanceTime();
+                            renderBaseControls(); 
+                        });
                     } else {
-                        printText(`<span class="system-msg">Scanning ${item.name}... Clean. No evidence found.</span>`);
+                        printText(`<span class="system-msg">Scanning... Clean. It's just a normal object.</span>`);
+                        advanceTime();
+                        renderBaseControls();
                     }
-                    renderBaseControls();
                 });
             });
             createButton('[ BACK ]', renderBaseControls);
         }
 
+        function takeWeapon(item) {
+            printText(`<span class="danger-msg">EVIDENCE ACQUIRED. THE MURDERER KNOWS YOU HAVE IT. YOU HAVE MINUTES TO LIVE. FIND THE CRIME SCENE AND GATHER THEM!</span>`);
+            config.hasWeapon = true;
+            config.jeopardyTimer = Math.floor(Math.random() * 4) + 7; // 7 to 10 moves
+            item.roomIndex = -99; // Remove from map
+            renderBaseControls();
+        }
+
         function renderQuestionControls() {
             controlsDiv.innerHTML = '';
+            // Re-evaluate people here in case someone moved in
             const peopleHere = suspects.filter(s => s.roomIndex === config.currentRoomIndex);
             
             if (peopleHere.length === 0) {
@@ -421,6 +483,7 @@
                     suspect.annoyance++;
                     printText(`> Interrogating ${suspect.name}...`);
                     printText(getSuspectResponse(suspect));
+                    advanceTime();
                     renderBaseControls();
                 });
             });
@@ -432,6 +495,7 @@
             printText('<span class="system-msg">Initiating lockdown protocols. All suspects forced into current location.</span>');
             suspects.forEach(s => s.roomIndex = config.currentRoomIndex);
             config.isGathered = true;
+            advanceTime();
             lookRoom();
             renderBaseControls();
         }
@@ -442,15 +506,18 @@
                 createButton(suspect.name, () => {
                     printText(`<span class="danger-msg">YOU ACCUSE ${suspect.name.toUpperCase()}!</span>`);
                     
-                    if (config.currentRoomIndex !== config.murderRoomIndex) {
+                    if (!config.hasWeapon) {
+                        printText('<span class="danger-msg">FATAL ERROR: You don\'t have the murder weapon! They laugh at your lack of evidence. The real killer escapes. GAME OVER.</span>');
+                        config.gameOver = true;
+                    } else if (config.currentRoomIndex !== config.murderRoomIndex) {
                         printText('<span class="danger-msg">FATAL ERROR: You initiated the lockdown in the wrong room! While distracted, the murderer executes you. GAME OVER.</span>');
                         config.gameOver = true;
                     } else if (suspect.isMurderer) {
                         printText('<span class="accent-color" style="color:var(--accent-color); font-weight:bold; font-size: 1.2em;">*** CASE CLOSED ***</span>');
-                        printText(`Trapped at the scene of the crime with the murder weapon in your hands, ${suspect.name}'s alibi crumbles. They confess immediately. YOU WIN.`);
+                        printText(`Trapped at the scene of the crime with the murder weapon in your hands, you point out the contradiction in ${suspect.name}'s alibi. They break down and confess immediately. YOU SURVIVE. YOU WIN.`);
                         config.gameOver = true;
                     } else {
-                        printText(`<span class="danger-msg">INCORRECT. ${suspect.name} is innocent. The real murderer realizes your incompetence and eliminates you. GAME OVER.</span>`);
+                        printText(`<span class="danger-msg">INCORRECT. ${suspect.name} is innocent. The real murderer realizes your incompetence, steps out of the shadows, and eliminates you. GAME OVER.</span>`);
                         config.gameOver = true;
                     }
                     controlsDiv.innerHTML = ''; 
