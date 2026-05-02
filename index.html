@@ -2,16 +2,464 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Sleuth Web App</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sleuth: 2026</title>
+    <style>
+        /* --- Sleuth: 2026 Modern Aesthetic --- */
+        :root {
+            --bg-color: #050505;
+            --text-color: #e0e0e0;
+            --accent-color: #00e6ff;
+            --danger-color: #ff3366;
+            --panel-color: #111111;
+            --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-stack);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 600px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Minimap --- */
+        #minimap {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            padding: 10px;
+            background: var(--panel-color);
+            border-bottom: 1px solid #222;
+        }
+
+        .map-room {
+            height: 40px;
+            background-color: #1a1a1a;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            text-transform: uppercase;
+            text-align: center;
+            letter-spacing: 1px;
+            border: 1px solid #333;
+            font-weight: bold;
+        }
+
+        .map-room.visited {
+            color: #888;
+        }
+
+        .map-room.active {
+            background-color: #0a1a2a;
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            box-shadow: 0 0 8px rgba(0, 230, 255, 0.2);
+        }
+
+        /* --- Output Terminal --- */
+        #output {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-size: 15px;
+            line-height: 1.5;
+            background: linear-gradient(to bottom, #0a0a0a, #111);
+        }
+
+        .output-line {
+            margin-bottom: 10px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .system-msg { color: #888; font-style: italic; }
+        .room-title { color: var(--accent-color); font-weight: bold; text-transform: uppercase; margin-top: 15px; border-bottom: 1px solid #333; display: inline-block;}
+        .danger-msg { color: var(--danger-color); font-weight: bold; }
+        .suspect-name { color: #fff; font-weight: bold; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Controls --- */
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 15px;
+            background: var(--panel-color);
+            border-top: 1px solid #222;
+            min-height: 140px;
+            align-content: flex-start;
+        }
+
+        button {
+            flex: 1 1 calc(50% - 8px);
+            background-color: transparent;
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+            padding: 14px 10px;
+            font-size: 14px;
+            text-transform: uppercase;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.1s;
+            user-select: none;
+        }
+
+        button:active {
+            background-color: rgba(0, 230, 255, 0.15);
+            transform: scale(0.97);
+        }
+
+        button.danger-btn {
+            color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        button.danger-btn:active {
+            background-color: rgba(255, 51, 102, 0.15);
+        }
+    </style>
 </head>
 <body>
     <div id="game-container">
-	<div id="minimap"></div> <!-- NEW: Visual representation of the house -->
+        <div id="minimap"></div>
         <div id="output"></div>
-        <div id="controls">
-            </div>
+        <div id="controls"></div>
     </div>
-    <script src="game.js"></script>
+
+    <script>
+        // --- STATE MANAGEMENT ---
+        const config = {
+            hasWeapon: false,
+            jeopardyTimer: -1,
+            murderRoomIndex: -1,
+            currentRoomIndex: 0,
+            isGathered: false,
+            gameOver: false
+        };
+
+        const roomNames = [
+            "Server Room", "Home Theater", "Smart Kitchen", 
+            "Zen Garden", "Living Area", "Bio-Hacking Lab", 
+            "Crypto Cave", "Master Suite", "Garage"
+        ];
+
+        const suspects = [
+            { name: "Julian", desc: "Disgraced Crypto-Founder", annoyance: 0, isMurderer: false, roomIndex: -1, claimedRoomIndex: -1 },
+            { name: "Harper", desc: "Wellness Influencer", annoyance: 0, isMurderer: false, roomIndex: -1, claimedRoomIndex: -1 },
+            { name: "Elias", desc: "Disdainful Geneticist", annoyance: 0, isMurderer: false, roomIndex: -1, claimedRoomIndex: -1 },
+            { name: "Aria", desc: "Stealth-Wealth Heiress", annoyance: 0, isMurderer: false, roomIndex: -1, claimedRoomIndex: -1 },
+            { name: "Marcus", desc: "Disgruntled AI Engineer", annoyance: 0, isMurderer: false, roomIndex: -1, claimedRoomIndex: -1 }
+        ];
+
+        const items = [
+            { name: "Vintage Katana", isWeapon: false, roomIndex: -1 },
+            { name: "Heavy Bronze Award", isWeapon: false, roomIndex: -1 },
+            { name: "3D Printed Firearm", isWeapon: false, roomIndex: -1 },
+            { name: "Broken Server Rack", isWeapon: false, roomIndex: -1 }
+        ];
+
+        let map = [];
+
+        // --- INITIALIZATION ---
+        function initGame() {
+            let shuffledNames = roomNames.sort(() => 0.5 - Math.random());
+            for (let i = 0; i < 9; i++) {
+                map.push({ name: shuffledNames[i], visited: false, index: i });
+            }
+            
+            config.currentRoomIndex = Math.floor(Math.random() * 9);
+            map[config.currentRoomIndex].visited = true;
+
+            const murderer = suspects[Math.floor(Math.random() * suspects.length)];
+            murderer.isMurderer = true;
+            
+            const weapon = items[Math.floor(Math.random() * items.length)];
+            weapon.isWeapon = true;
+
+            config.murderRoomIndex = Math.floor(Math.random() * 9);
+
+            suspects.forEach(s => {
+                s.roomIndex = Math.floor(Math.random() * 9);
+                if (s.isMurderer) {
+                    let falseRoom = Math.floor(Math.random() * 9);
+                    // Ensure the lie isn't accidentally their actual original room
+                    while (falseRoom === s.roomIndex) falseRoom = Math.floor(Math.random() * 9);
+                    s.claimedRoomIndex = falseRoom;
+                } else {
+                    s.claimedRoomIndex = s.roomIndex;
+                }
+            });
+
+            items.forEach(i => i.roomIndex = Math.floor(Math.random() * 9));
+
+            renderMap();
+            printText('<span class="system-msg">System Online. You are the lead investigator. A high-profile murder has occurred in this smart-mansion. Locate the weapon, find the contradiction, and gather the suspects at the crime scene.</span>');
+            lookRoom();
+            renderBaseControls();
+        }
+
+        // --- UTILITIES ---
+        function printText(htmlText) {
+            const outputDiv = document.getElementById('output');
+            const line = document.createElement('div');
+            line.className = 'output-line';
+            line.innerHTML = htmlText;
+            outputDiv.appendChild(line);
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
+
+        function advanceTime() {
+            if (config.gameOver) return;
+
+            // Suspects wander
+            suspects.forEach(s => {
+                if (Math.random() < 0.25 && !config.isGathered) {
+                    s.roomIndex = Math.floor(Math.random() * 9);
+                }
+            });
+
+            // Jeopardy Mechanics
+            if (config.hasWeapon) {
+                config.jeopardyTimer--;
+                if (config.jeopardyTimer === 3) printText('<span class="danger-msg">WARNING: Motion sensors detect rapid movement heading your way...</span>');
+                if (config.jeopardyTimer === 1) printText('<span class="danger-msg">WARNING: They are right outside the door! GATHER THEM NOW!</span>');
+                if (config.jeopardyTimer <= 0) {
+                    printText('<span class="danger-msg">CRITICAL FAILURE. The murderer found you holding the weapon. You have been eliminated. GAME OVER.</span>');
+                    config.gameOver = true;
+                    document.getElementById('controls').innerHTML = '';
+                }
+            }
+        }
+
+        // --- SCRIPT SYSTEM ---
+        function getSuspectResponse(suspect) {
+            if (suspect.annoyance > 3) {
+                const refusals = {
+                    "Julian": "Look, I have a Zoom call. My lawyer said this interrogation is over.",
+                    "Harper": "Honestly, your whole aura is just super negative right now. Talk to my agent.",
+                    "Elias": "You are iterating on the same questions. I will not continue this redundant cycle.",
+                    "Aria": "(Sigh) I'm done. Leave.",
+                    "Marcus": "Syntax error. Access denied. I'm stopping my processes now."
+                };
+                return `<span class="suspect-name">${suspect.name}:</span> "${refusals[suspect.name]}"`;
+            }
+
+            const stage = suspect.annoyance <= 1 ? "normal" : "irritated";
+            const claimedRoomName = map[suspect.claimedRoomIndex].name;
+            
+            const scripts = {
+                "Julian": {
+                    normal: `Bro, I was chilling in the ${claimedRoomName}. Just checking the blockchain.`,
+                    irritated: `Stop wasting my time! For the last time, I was in the ${claimedRoomName}.`
+                },
+                "Harper": {
+                    normal: `I was practicing some mindfulness in the ${claimedRoomName}. Major calm vibes.`,
+                    irritated: `Oh my god, you're ruining my alignment. I told you, ${claimedRoomName}. OK?`
+                },
+                "Elias": {
+                    normal: `I was cataloging samples in the ${claimedRoomName}. An absolute waste of my evening.`,
+                    irritated: `If you must know again, the ${claimedRoomName}. Do try to retain the data this time.`
+                },
+                "Aria": {
+                    normal: `Whatever. I was in the ${claimedRoomName}. Not that it's any of your business.`,
+                    irritated: `...${claimedRoomName}. Stop talking to me.`
+                },
+                "Marcus": {
+                    normal: `I was running diagnostics in the ${claimedRoomName}. The network is a mess.`,
+                    irritated: `Look at the server logs! I was in the ${claimedRoomName}. Leave me alone.`
+                }
+            };
+            
+            return `<span class="suspect-name">${suspect.name}:</span> "${scripts[suspect.name][stage]}"`;
+        }
+
+        // --- UI RENDERING ---
+        function renderMap() {
+            const minimap = document.getElementById('minimap');
+            minimap.innerHTML = '';
+            map.forEach((room, index) => {
+                const div = document.createElement('div');
+                div.className = `map-room ${room.visited ? 'visited' : ''} ${index === config.currentRoomIndex ? 'active' : ''}`;
+                
+                let label = '?';
+                if (room.visited) {
+                    // Create a short 3-letter acronym for the room
+                    label = room.name.split(' ').map(w => w[0]).join('').substring(0,3);
+                }
+                div.innerText = label;
+                minimap.appendChild(div);
+            });
+        }
+
+        function lookRoom() {
+            const room = map[config.currentRoomIndex];
+            room.visited = true;
+            renderMap();
+
+            printText(`<div class="room-title">${room.name}</div>`);
+            
+            if (config.currentRoomIndex === config.murderRoomIndex) {
+                printText('<span class="danger-msg">CRIME SCENE DETECTED: Blood pooling on the floor. This is where it happened.</span>');
+            }
+            
+            const peopleHere = suspects.filter(s => s.roomIndex === config.currentRoomIndex);
+            if (peopleHere.length > 0) printText(`Individuals present: ${peopleHere.map(s => `<span class="suspect-name">${s.name}</span>`).join(", ")}`);
+
+            const itemsHere = items.filter(i => i.roomIndex === config.currentRoomIndex);
+            if (itemsHere.length > 0) printText(`Scannable items: ${itemsHere.map(i => i.name).join(", ")}`);
+        }
+
+        // --- CONTROLS ENGINE ---
+        const controlsDiv = document.getElementById('controls');
+
+        function createButton(text, onClick, isDanger = false) {
+            const btn = document.createElement('button');
+            btn.innerText = text;
+            if (isDanger) btn.className = 'danger-btn';
+            btn.onclick = () => {
+                if (!config.gameOver) {
+                    onClick();
+                    advanceTime();
+                }
+            };
+            controlsDiv.appendChild(btn);
+        }
+
+        function renderBaseControls() {
+            if (config.gameOver) return;
+            controlsDiv.innerHTML = '';
+            createButton('Look', lookRoom);
+            createButton('Move', renderMoveControls);
+            
+            if (config.isGathered) {
+                createButton('Make Accusation', renderAccuseControls, true);
+            } else {
+                createButton('Examine', renderItemControls);
+                createButton('Question', renderQuestionControls);
+                if (config.hasWeapon) createButton('GATHER ALL', gatherSuspects, true);
+            }
+        }
+
+        function renderMoveControls() {
+            controlsDiv.innerHTML = '';
+            const idx = config.currentRoomIndex;
+            const row = Math.floor(idx / 3);
+            const col = idx % 3;
+
+            if (row > 0) createButton('North', () => move(idx - 3));
+            if (row < 2) createButton('South', () => move(idx + 3));
+            if (col > 0) createButton('West', () => move(idx - 1));
+            if (col < 2) createButton('East', () => move(idx + 1));
+            createButton('[ BACK ]', renderBaseControls);
+        }
+
+        function move(newIndex) {
+            config.currentRoomIndex = newIndex;
+            config.isGathered = false; 
+            printText('<span class="system-msg">Moving...</span>');
+            lookRoom();
+            renderBaseControls();
+        }
+
+        function renderItemControls() {
+            controlsDiv.innerHTML = '';
+            const itemsHere = items.filter(i => i.roomIndex === config.currentRoomIndex);
+            
+            if (itemsHere.length === 0) {
+                printText('<span class="system-msg">No items of interest here.</span>');
+                renderBaseControls();
+                return;
+            }
+
+            itemsHere.forEach(item => {
+                createButton(item.name, () => {
+                    if (item.isWeapon) {
+                        printText(`<span class="danger-msg">EVIDENCE ACQUIRED: The ${item.name} is coated in DNA. THE MURDERER KNOWS YOU HAVE IT. YOU HAVE MINUTES TO LIVE. GATHER THEM AT THE CRIME SCENE.</span>`);
+                        config.hasWeapon = true;
+                        config.jeopardyTimer = Math.floor(Math.random() * 5) + 6; // 6 to 10 moves
+                        item.roomIndex = -99; 
+                    } else {
+                        printText(`<span class="system-msg">Scanning ${item.name}... Clean. No evidence found.</span>`);
+                    }
+                    renderBaseControls();
+                });
+            });
+            createButton('[ BACK ]', renderBaseControls);
+        }
+
+        function renderQuestionControls() {
+            controlsDiv.innerHTML = '';
+            const peopleHere = suspects.filter(s => s.roomIndex === config.currentRoomIndex);
+            
+            if (peopleHere.length === 0) {
+                printText('<span class="system-msg">No one is here.</span>');
+                renderBaseControls();
+                return;
+            }
+
+            peopleHere.forEach(suspect => {
+                createButton(suspect.name, () => {
+                    suspect.annoyance++;
+                    printText(`> Interrogating ${suspect.name}...`);
+                    printText(getSuspectResponse(suspect));
+                    renderBaseControls();
+                });
+            });
+            createButton('[ BACK ]', renderBaseControls);
+        }
+
+        // --- CLIMAX ---
+        function gatherSuspects() {
+            printText('<span class="system-msg">Initiating lockdown protocols. All suspects forced into current location.</span>');
+            suspects.forEach(s => s.roomIndex = config.currentRoomIndex);
+            config.isGathered = true;
+            lookRoom();
+            renderBaseControls();
+        }
+
+        function renderAccuseControls() {
+            controlsDiv.innerHTML = '';
+            suspects.forEach(suspect => {
+                createButton(suspect.name, () => {
+                    printText(`<span class="danger-msg">YOU ACCUSE ${suspect.name.toUpperCase()}!</span>`);
+                    
+                    if (config.currentRoomIndex !== config.murderRoomIndex) {
+                        printText('<span class="danger-msg">FATAL ERROR: You initiated the lockdown in the wrong room! While distracted, the murderer executes you. GAME OVER.</span>');
+                        config.gameOver = true;
+                    } else if (suspect.isMurderer) {
+                        printText('<span class="accent-color" style="color:var(--accent-color); font-weight:bold; font-size: 1.2em;">*** CASE CLOSED ***</span>');
+                        printText(`Trapped at the scene of the crime with the murder weapon in your hands, ${suspect.name}'s alibi crumbles. They confess immediately. YOU WIN.`);
+                        config.gameOver = true;
+                    } else {
+                        printText(`<span class="danger-msg">INCORRECT. ${suspect.name} is innocent. The real murderer realizes your incompetence and eliminates you. GAME OVER.</span>`);
+                        config.gameOver = true;
+                    }
+                    controlsDiv.innerHTML = ''; 
+                }, true);
+            });
+            createButton('[ BACK ]', renderBaseControls);
+        }
+
+        initGame();
+    </script>
 </body>
 </html>
