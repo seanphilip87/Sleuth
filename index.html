@@ -84,7 +84,7 @@
         .controls-row {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: stretch;
         }
 
         /* D-Pad */
@@ -115,26 +115,29 @@
         .action-btns {
             display: flex;
             flex-wrap: wrap;
+            align-content: flex-start;
             gap: 8px;
             flex-grow: 1;
             margin-left: 20px;
         }
         .action-btns button {
-            flex: 1 1 100%;
+            flex: 1 1 calc(50% - 8px); /* 2x2 Grid */
             background: #0a0a0a;
             color: var(--accent-color);
             border: 1px solid var(--accent-color);
-            padding: 12px;
+            padding: 12px 6px;
             font-family: inherit;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: bold;
             text-transform: uppercase;
             cursor: pointer;
             transition: all 0.2s;
+            border-radius: 4px;
         }
         .action-btns button:active { transform: scale(0.98); background: #111; }
         .action-btns button.danger-btn { color: var(--danger-color); border-color: var(--danger-color); }
         .action-btns button.danger-btn:hover { background: rgba(255, 51, 102, 0.1); }
+        .action-btns button.full-width { flex: 1 1 100%; }
     </style>
 </head>
 <body>
@@ -207,10 +210,30 @@
             "You catch a faint whiff of expensive cologne and copper."
         ];
 
+        // --- HUMOROUS FAILURE ARRAYS ---
+        const emptyQuestionMsgs = [
+            "You aggressively interrogate a nearby shadow. It invokes its right to remain silent.",
+            "You shout 'WHERE WERE YOU?!' into the empty air. The house's AI suggests a therapist.",
+            "You corner a speck of dust and demand its alibi. You are losing your grip on reality.",
+            "There is literally no one standing next to you. Who are you talking to?"
+        ];
+        const emptyExamineMsgs = [
+            "You get on your hands and knees to inspect a perfectly normal piece of floor. Very thorough. Completely useless.",
+            "You stare intensely at the wall. The wall stares back. You learn nothing.",
+            "You pull out your flashlight to examine absolutely nothing. Impressive detective work.",
+            "There are no scannable items in your immediate vicinity. Stand up."
+        ];
+        const emptySearchMsgs = [
+            "You search the hallway corridor. You discover that it is, indeed, a hallway.",
+            "You look around the empty transition space. No bodies, no clues, just expensive tiling.",
+            "You tear apart the hallway. Just kidding, there's nothing to tear apart out here."
+        ];
+
         // --- GAME STATE ---
         const config = {
             tileSize: 20,
             hasWeapon: false,
+            awaitingWeaponChoice: null, // Holds item obj if examining weapon
             jeopardyTimer: -1,
             murderRoomId: '',
             crimeSceneFound: false,
@@ -276,7 +299,7 @@
             });
 
             printText('<span class="system-msg" style="color:var(--accent-color); font-weight:bold; font-size:1.2em;">>>> SYSTEM BOOT: SLEUTH OS v2026</span>');
-            printText('<span class="system-msg">Silas Vance, billionaire tech-tycoon, has been murdered in his own smart-mansion. You are the lead detective.<br><br><b>YOUR DIRECTIVES:</b><br>1. Explore the dark mansion (Use D-Pad/Arrows).<br>2. <b>INTERACT</b> when next to objects or suspects.<br>3. Interrogate the suspects. Their rich dialogue holds their alibis. Find the contradiction.<br>4. <b>SEARCH</b> rooms to find the bloody crime scene.<br>5. Find the Murder Weapon.<br>6. Gather everyone at the scene and Accuse the liar.<br><br><i>Warning: Finding the weapon triggers the killer\'s panic response. Do not linger.</i></span>');
+            printText('<span class="system-msg">Silas Vance, billionaire tech-tycoon, has been murdered in his own smart-mansion. You are the lead detective.<br><br><b>YOUR DIRECTIVES:</b><br>1. Explore the dark mansion (Use D-Pad/Arrows).<br>2. <b>Search Rooms</b> to locate the bloody crime scene.<br>3. <b>Question Suspects</b> by standing next to them. Their dialogue holds their alibis. Find the contradiction.<br>4. <b>Examine Items</b> to find the murder weapon.<br>5. Gather everyone at the scene and Accuse the liar.<br><br><i>Warning: Finding the weapon is one thing. Choosing to take it will trigger the killer\'s panic response.</i></span>');
             renderMap();
             updateUI();
         }
@@ -320,7 +343,7 @@
                     let py = y * config.tileSize;
 
                     if (tile === 'W') {
-                        ctx.fillStyle = '#0a1a2a'; // Deep neon blue walls
+                        ctx.fillStyle = '#0a1a2a'; 
                         ctx.fillRect(px, py, config.tileSize, config.tileSize);
                         ctx.strokeStyle = '#003355';
                         ctx.strokeRect(px, py, config.tileSize, config.tileSize);
@@ -337,7 +360,6 @@
                     } else {
                         ctx.fillStyle = '#151515'; 
                         ctx.fillRect(px, py, config.tileSize, config.tileSize);
-                        // Add subtle grid dots for hallway
                         ctx.fillStyle = '#333';
                         ctx.fillRect(px + 9, py + 9, 2, 2);
                     }
@@ -367,7 +389,6 @@
                 }
             });
 
-            // Draw Player
             ctx.fillStyle = '#00e6ff';
             ctx.beginPath();
             ctx.arc(player.x * config.tileSize + 10, player.y * config.tileSize + 10, 7, 0, Math.PI*2);
@@ -379,7 +400,7 @@
 
         // --- MOVEMENT & ACTIONS ---
         function attemptMove(dx, dy) {
-            if (config.gameOver || config.isGathered) return;
+            if (config.gameOver || config.isGathered || config.awaitingWeaponChoice) return;
             let nx = player.x + dx;
             let ny = player.y + dy;
             
@@ -388,7 +409,6 @@
                 if (tile !== 'W') {
                     player.x = nx; player.y = ny;
                     
-                    // Ambient Hallway text
                     if (tile === '.' && Math.random() < 0.1) {
                         printText(`<hr><span class="ambient-msg">${ambientHallwayTexts[Math.floor(Math.random() * ambientHallwayTexts.length)]}</span>`);
                     }
@@ -413,61 +433,28 @@
 
             if (config.hasWeapon && !config.isGathered) {
                 config.jeopardyTimer--;
-                if (config.jeopardyTimer === 5) printText('<hr><span class="danger-msg">WARNING: The smart-home system chimes. "Unidentified rapid movement detected." The killer knows you have the weapon. They are coming.</span>');
+                if (config.jeopardyTimer === 5) printText('<hr><span class="danger-msg">WARNING: The smart-home system chimes. "Unidentified rapid movement detected." The killer knows you took the weapon. They are coming.</span>');
                 if (config.jeopardyTimer === 2) printText('<hr><span class="danger-msg">WARNING: Heavy footsteps sprint down the adjacent corridor! You are running out of time! GATHER THEM AT THE SCENE!</span>');
                 if (config.jeopardyTimer <= 0) {
-                    printText('<hr><span class="danger-msg">CRITICAL FAILURE. The door shatters open. The murderer stands there, eyes wild, enraged that you found their weapon. You don\'t even have time to scream. GAME OVER.</span>');
+                    printText('<hr><span class="danger-msg">CRITICAL FAILURE. The door shatters open. The murderer stands there, eyes wild, enraged that you took their weapon. You don\'t even have time to scream. GAME OVER.</span>');
                     config.gameOver = true;
                     updateUI();
                 }
             }
         }
 
-        // --- INTERACTION LOGIC ---
-        function interact() {
-            if (config.gameOver) return;
-            
-            let foundSomething = false;
+        // --- SPECIFIC ACTION FUNCTIONS ---
+        function searchRoom() {
+            if (config.gameOver || config.awaitingWeaponChoice) return;
             let pTile = mapLayout[player.y][player.x];
-
-            // 1. Suspects
-            suspects.forEach(s => {
-                if (Math.abs(s.x - player.x) <= 1 && Math.abs(s.y - player.y) <= 1) {
-                    s.hasQuestioned = true;
-                    let fullDialogue = s.script.replace("ALIBI_INSERT", `<span class="alibi-text">${s.alibi}</span>`);
-                    printText(`<hr>> You corner <span class="suspect-name">${s.name}</span>.<br><br><span class="alibi-text">"${fullDialogue}"</span>`);
-                    foundSomething = true;
-                }
-            });
-
-            // 2. Items
-            for (let i = items.length - 1; i >= 0; i--) {
-                let item = items[i];
-                if (Math.abs(item.x - player.x) <= 1 && Math.abs(item.y - player.y) <= 1) {
-                    printText(`<hr>> You lean down to inspect the <b>${item.name}</b>.`);
-                    printText(`<span class="system-msg">${item.desc}</span>`);
-                    
-                    if (item.isWeapon) {
-                        printText(`<br><span class="danger-msg">Wait... you shine your phone flashlight on it. It's covered in partially dried blood and fingerprints. THIS IS THE MURDER WEAPON! You bag it immediately. (HURRY, GATHER EVERYONE AT THE CRIME SCENE!)</span>`);
-                        config.hasWeapon = true;
-                        config.jeopardyTimer = 12;
-                        items.splice(i, 1);
-                    } else {
-                        printText(`<br><span class="system-msg">You scan it for DNA. Completely clean. Just a bizarre artifact of extreme wealth.</span>`);
-                    }
-                    foundSomething = true;
-                }
-            }
-
-            // 3. Search Room
-            if (!foundSomething && pTile >= '1' && pTile <= '9') {
+            
+            if (pTile >= '1' && pTile <= '9') {
                 config.roomExamines[pTile]++;
                 let room = roomDictionary[pTile];
                 
                 printText(`<hr><div class="room-title">${room.name}</div>`);
                 
                 if (config.roomExamines[pTile] === 1) {
-                    // First search gives the deep lore description
                     printText(`<span class="system-msg">${room.desc} You begin tossing the room, looking for clues.</span>`);
                 } else {
                     printText(`> You continue to tear the ${room.name} apart...`);
@@ -487,10 +474,80 @@
                     ];
                     printText(`<span class="system-msg">${failMsgs[Math.floor(Math.random() * failMsgs.length)]}</span>`);
                 }
-            } else if (!foundSomething) {
-                printText('<hr><span class="system-msg">You wave your hands in the dark empty air. There is absolutely nothing here to interact with. Walk closer to a person or object, or enter a room to search it.</span>');
+            } else {
+                printText(`<hr><span class="system-msg">${emptySearchMsgs[Math.floor(Math.random() * emptySearchMsgs.length)]}</span>`);
             }
+            advanceTime();
+            renderMap();
+            updateUI();
+        }
 
+        function examineItem() {
+            if (config.gameOver || config.awaitingWeaponChoice) return;
+            let found = false;
+            
+            for (let i = items.length - 1; i >= 0; i--) {
+                let item = items[i];
+                if (Math.abs(item.x - player.x) <= 1 && Math.abs(item.y - player.y) <= 1) {
+                    printText(`<hr>> You lean down to inspect the <b>${item.name}</b>.`);
+                    printText(`<span class="system-msg">${item.desc}</span>`);
+                    
+                    if (item.isWeapon) {
+                        printText(`<br><span class="danger-msg">Wait... you shine your phone flashlight on it. It's covered in partially dried blood and fingerprints. THIS IS THE MURDER WEAPON!</span>`);
+                        printText(`<span class="system-msg" style="color:orange">WARNING: If you TAKE it, the killer will realize you have the evidence and hunt you down. You can LEAVE it here to stay safe for now.</span>`);
+                        config.awaitingWeaponChoice = { item: item, index: i };
+                        updateUI(); // Pause and show Take/Leave buttons
+                        return; 
+                    } else {
+                        printText(`<br><span class="system-msg">You scan it for DNA. Completely clean. Just a bizarre artifact of extreme wealth.</span>`);
+                    }
+                    found = true;
+                }
+            }
+            if (!found) {
+                printText(`<hr><span class="system-msg">${emptyExamineMsgs[Math.floor(Math.random() * emptyExamineMsgs.length)]}</span>`);
+            }
+            advanceTime();
+            renderMap();
+            updateUI();
+        }
+
+        function questionSuspect() {
+            if (config.gameOver || config.awaitingWeaponChoice) return;
+            let found = false;
+            
+            suspects.forEach(s => {
+                if (Math.abs(s.x - player.x) <= 1 && Math.abs(s.y - player.y) <= 1) {
+                    s.hasQuestioned = true;
+                    let fullDialogue = s.script.replace("ALIBI_INSERT", `<span class="alibi-text">${s.alibi}</span>`);
+                    printText(`<hr>> You corner <span class="suspect-name">${s.name}</span>.<br><br><span class="alibi-text">"${fullDialogue}"</span>`);
+                    found = true;
+                }
+            });
+            if (!found) {
+                printText(`<hr><span class="system-msg">${emptyQuestionMsgs[Math.floor(Math.random() * emptyQuestionMsgs.length)]}</span>`);
+            }
+            advanceTime();
+            renderMap();
+            updateUI();
+        }
+
+        // --- WEAPON CHOICES ---
+        function takeWeapon() {
+            printText(`<hr><span class="danger-msg">>>> EVIDENCE ACQUIRED. You bag the weapon. THE MURDERER KNOWS YOU HAVE IT. YOU HAVE MINUTES TO LIVE. GATHER THEM AT THE CRIME SCENE!</span>`);
+            config.hasWeapon = true;
+            config.jeopardyTimer = 12;
+            items.splice(config.awaitingWeaponChoice.index, 1);
+            config.awaitingWeaponChoice = null;
+            advanceTime();
+            renderMap();
+            updateUI();
+        }
+
+        function leaveWeapon() {
+            printText(`<hr><span class="system-msg">>>> You carefully back away from the bloody weapon, leaving it exactly where it lies. The killer remains unaware of your discovery.</span>`);
+            config.awaitingWeaponChoice = null;
+            advanceTime();
             renderMap();
             updateUI();
         }
@@ -525,7 +582,7 @@
             updateUI();
         }
 
-        // --- UI & INPUT BINDING ---
+        // --- UI BINDING ---
         function printText(html) {
             const out = document.getElementById('output');
             out.innerHTML += `<div class="output-line">${html}</div>`;
@@ -538,6 +595,24 @@
             
             if (config.gameOver) return;
 
+            // State 1: Player is deciding whether to take the weapon
+            if (config.awaitingWeaponChoice) {
+                let takeBtn = document.createElement('button');
+                takeBtn.className = 'danger-btn full-width';
+                takeBtn.innerText = "TAKE THE WEAPON";
+                takeBtn.onclick = takeWeapon;
+                
+                let leaveBtn = document.createElement('button');
+                leaveBtn.className = 'full-width';
+                leaveBtn.innerText = "LEAVE IT FOR NOW";
+                leaveBtn.onclick = leaveWeapon;
+                
+                actionsDiv.appendChild(takeBtn);
+                actionsDiv.appendChild(leaveBtn);
+                return;
+            }
+
+            // State 2: Player has gathered everyone and must accuse
             if (config.isGathered) {
                 let questioned = suspects.filter(s => s.hasQuestioned);
                 if (questioned.length === 0) {
@@ -552,19 +627,32 @@
                     btn.onclick = () => accuse(s);
                     actionsDiv.appendChild(btn);
                 });
-            } else {
-                let interactBtn = document.createElement('button');
-                interactBtn.innerText = "[SPACEBAR] Interact / Search";
-                interactBtn.onclick = interact;
-                actionsDiv.appendChild(interactBtn);
+                return;
+            } 
+            
+            // State 3: Normal gameplay loop
+            let searchBtn = document.createElement('button');
+            searchBtn.innerText = "Examine Room";
+            searchBtn.onclick = searchRoom;
+            
+            let examineBtn = document.createElement('button');
+            examineBtn.innerText = "Examine Item";
+            examineBtn.onclick = examineItem;
+            
+            let questionBtn = document.createElement('button');
+            questionBtn.innerText = "Question Suspect";
+            questionBtn.onclick = questionSuspect;
+            
+            actionsDiv.appendChild(searchBtn);
+            actionsDiv.appendChild(examineBtn);
+            actionsDiv.appendChild(questionBtn);
 
-                if (config.hasWeapon) {
-                    let gatherBtn = document.createElement('button');
-                    gatherBtn.className = 'danger-btn';
-                    gatherBtn.innerText = "GATHER EVERYONE";
-                    gatherBtn.onclick = triggerGather;
-                    actionsDiv.appendChild(gatherBtn);
-                }
+            if (config.hasWeapon) {
+                let gatherBtn = document.createElement('button');
+                gatherBtn.className = 'danger-btn full-width';
+                gatherBtn.innerText = "GATHER EVERYONE";
+                gatherBtn.onclick = triggerGather;
+                actionsDiv.appendChild(gatherBtn);
             }
         }
 
@@ -578,7 +666,6 @@
             if (e.key === 'ArrowDown' || e.key === 's') attemptMove(0, 1);
             if (e.key === 'ArrowLeft' || e.key === 'a') attemptMove(-1, 0);
             if (e.key === 'ArrowRight' || e.key === 'd') attemptMove(1, 0);
-            if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if(!config.isGathered) interact(); }
         });
 
         initGame();
