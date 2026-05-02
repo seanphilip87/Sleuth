@@ -21,7 +21,8 @@
             margin: 0;
             display: flex;
             justify-content: center;
-            height: 100vh;
+            height: 100vh;       /* Fallback for older browsers */
+            height: 100dvh;      /* Prevents mobile browser bar clipping */
             overflow: hidden;
             touch-action: none; 
         }
@@ -49,6 +50,8 @@
             image-rendering: pixelated;
             border: 1px solid #333;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            max-width: 100%;     /* Prevents overflowing narrow screens */
+            height: auto;
         }
 
         /* --- Text Output --- */
@@ -85,6 +88,7 @@
             display: flex;
             justify-content: space-between;
             align-items: stretch;
+            gap: 15px;
         }
 
         /* D-Pad */
@@ -93,6 +97,7 @@
             grid-template-columns: repeat(3, 45px);
             grid-template-rows: repeat(3, 45px);
             gap: 6px;
+            flex-shrink: 0; /* Prevents squishing on desktop */
         }
         .d-btn {
             background: #1a1a1a;
@@ -118,10 +123,9 @@
             align-content: flex-start;
             gap: 8px;
             flex-grow: 1;
-            margin-left: 20px;
         }
         .action-btns button {
-            flex: 1 1 calc(50% - 8px); /* 2x2 Grid */
+            flex: 1 1 calc(50% - 8px);
             background: #0a0a0a;
             color: var(--accent-color);
             border: 1px solid var(--accent-color);
@@ -138,6 +142,29 @@
         .action-btns button.danger-btn { color: var(--danger-color); border-color: var(--danger-color); }
         .action-btns button.danger-btn:hover { background: rgba(255, 51, 102, 0.1); }
         .action-btns button.full-width { flex: 1 1 100%; }
+
+        /* --- MOBILE OPTIMIZATIONS --- */
+        @media (max-width: 500px) {
+            .controls-row {
+                flex-direction: column; /* Stack D-Pad and Buttons vertically */
+                align-items: center;    /* Center the D-pad */
+                gap: 15px;
+            }
+            .d-pad {
+                grid-template-columns: repeat(3, 55px); /* Make D-Pad bigger for thumbs */
+                grid-template-rows: repeat(3, 55px);
+            }
+            .d-btn {
+                font-size: 18px; 
+            }
+            .action-btns {
+                width: 100%; /* Buttons take full width below D-pad */
+            }
+            .action-btns button {
+                padding: 16px 8px; /* Taller buttons for fat-fingering */
+                font-size: 14px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -233,7 +260,7 @@
         const config = {
             tileSize: 20,
             hasWeapon: false,
-            awaitingWeaponChoice: null, // Holds item obj if examining weapon
+            awaitingWeaponChoice: null,
             jeopardyTimer: -1,
             murderRoomId: '',
             crimeSceneFound: false,
@@ -496,7 +523,7 @@
                         printText(`<br><span class="danger-msg">Wait... you shine your phone flashlight on it. It's covered in partially dried blood and fingerprints. THIS IS THE MURDER WEAPON!</span>`);
                         printText(`<span class="system-msg" style="color:orange">WARNING: If you TAKE it, the killer will realize you have the evidence and hunt you down. You can LEAVE it here to stay safe for now.</span>`);
                         config.awaitingWeaponChoice = { item: item, index: i };
-                        updateUI(); // Pause and show Take/Leave buttons
+                        updateUI(); 
                         return; 
                     } else {
                         printText(`<br><span class="system-msg">You scan it for DNA. Completely clean. Just a bizarre artifact of extreme wealth.</span>`);
