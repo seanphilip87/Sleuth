@@ -23,12 +23,12 @@
             justify-content: center;
             height: 100vh;
             overflow: hidden;
-            touch-action: none; /* Prevents zooming/scrolling on mobile */
+            touch-action: none; 
         }
 
         #game-container {
             width: 100%;
-            max-width: 500px;
+            max-width: 600px;
             display: flex;
             flex-direction: column;
             height: 100%;
@@ -42,37 +42,43 @@
             justify-content: center;
             align-items: center;
             padding: 10px 0;
+            box-shadow: 0 4px 15px rgba(0, 230, 255, 0.1);
+            z-index: 10;
         }
         canvas {
             image-rendering: pixelated;
             border: 1px solid #333;
-            box-shadow: 0 0 15px rgba(0, 230, 255, 0.1);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
         }
 
         /* --- Text Output --- */
         #output {
             flex-grow: 1;
             overflow-y: auto;
-            padding: 15px;
-            font-size: 13px;
-            line-height: 1.5;
-            background: linear-gradient(to bottom, #0a0a0a, #111);
+            padding: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+            background: linear-gradient(to bottom, #050505, #111);
         }
-        .output-line { margin-bottom: 8px; animation: fadeIn 0.2s ease-in; }
-        .system-msg { color: #888; }
-        .danger-msg { color: var(--danger-color); font-weight: bold; }
-        .suspect-name { color: #fff; font-weight: bold; }
-        .alibi-text { color: #ccc; font-style: italic; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .output-line { margin-bottom: 15px; animation: fadeIn 0.3s ease-in; }
+        .system-msg { color: #777; font-style: italic; }
+        .danger-msg { color: var(--danger-color); font-weight: bold; text-shadow: 0 0 5px rgba(255,51,102,0.4); }
+        .suspect-name { color: #fff; font-weight: bold; font-size: 1.1em; }
+        .alibi-text { color: #ddd; }
+        .ambient-msg { color: #00aa55; font-style: italic; }
+        .room-title { color: var(--accent-color); font-weight: bold; font-size: 1.2em; border-bottom: 1px dashed #333; display: inline-block; margin-bottom: 5px;}
+        hr { border-color: #222; margin: 15px 0; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
 
         /* --- Controls --- */
         #ui-panel {
             background: var(--panel-color);
             border-top: 1px solid #222;
-            padding: 10px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
             gap: 10px;
+            z-index: 10;
         }
 
         .controls-row {
@@ -84,20 +90,22 @@
         /* D-Pad */
         .d-pad {
             display: grid;
-            grid-template-columns: repeat(3, 40px);
-            grid-template-rows: repeat(3, 40px);
-            gap: 5px;
+            grid-template-columns: repeat(3, 45px);
+            grid-template-rows: repeat(3, 45px);
+            gap: 6px;
         }
         .d-btn {
             background: #1a1a1a;
             border: 1px solid #333;
             color: var(--accent-color);
             font-weight: bold;
-            border-radius: 5px;
+            font-size: 16px;
+            border-radius: 6px;
             cursor: pointer;
             user-select: none;
+            transition: all 0.1s;
         }
-        .d-btn:active { background: rgba(0, 230, 255, 0.3); }
+        .d-btn:active { background: rgba(0, 230, 255, 0.3); transform: scale(0.95); }
         #btn-up { grid-column: 2; grid-row: 1; }
         #btn-left { grid-column: 1; grid-row: 2; }
         #btn-right { grid-column: 3; grid-row: 2; }
@@ -107,24 +115,26 @@
         .action-btns {
             display: flex;
             flex-wrap: wrap;
-            gap: 5px;
+            gap: 8px;
             flex-grow: 1;
-            margin-left: 15px;
+            margin-left: 20px;
         }
         .action-btns button {
             flex: 1 1 100%;
             background: #0a0a0a;
             color: var(--accent-color);
             border: 1px solid var(--accent-color);
-            padding: 10px;
+            padding: 12px;
             font-family: inherit;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: bold;
             text-transform: uppercase;
             cursor: pointer;
+            transition: all 0.2s;
         }
-        .action-btns button:active { transform: scale(0.97); }
+        .action-btns button:active { transform: scale(0.98); background: #111; }
         .action-btns button.danger-btn { color: var(--danger-color); border-color: var(--danger-color); }
+        .action-btns button.danger-btn:hover { background: rgba(255, 51, 102, 0.1); }
     </style>
 </head>
 <body>
@@ -141,16 +151,13 @@
                     <button class="d-btn" id="btn-right">D</button>
                     <button class="d-btn" id="btn-down">S</button>
                 </div>
-                <div class="action-btns" id="dynamic-actions">
-                    <!-- Buttons inject here -->
-                </div>
+                <div class="action-btns" id="dynamic-actions"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- MAP ENGINE ---
-        // W=Wall, .=Hallway, D=Door, 1-9=Rooms
+        // --- IMMERSIVE LORE & DATA ---
         const mapLayout = [
             "WWWWWWWWWWWWWWW",
             "W1111W2222W333W",
@@ -170,11 +177,37 @@
         ];
         
         const roomDictionary = {
-            '1': "Server Room", '2': "Home Theater", '3': "Smart Kitchen",
-            '4': "Living Area", '5': "Bio Lab", '6': "Zen Garden",
-            '7': "Crypto Cave", '8': "Master Suite", '9': "Garage"
+            '1': { name: "Server Room", desc: "The heat in here is oppressive. Rows of towering, monolithic servers hum with a deafening drone, mining some worthless alt-coin. Empty cans of imported energy drinks litter the floor. It smells like ozone and misplaced hubris." },
+            '2': { name: "Home Theater", desc: "A cavernous room featuring seating more expensive than most people's homes. The massive 8K screen is paused on a jarringly pretentious French art film. The acoustic dampening panels on the walls make the silence in here feel heavy and unnatural." },
+            '3': { name: "Smart Kitchen", desc: "A sterile, stainless-steel nightmare. It looks less like a place to cook and more like a surgical theater. A condescending AI refrigerator hums softly, its digital display currently scrolling through a list of 'sub-optimal' dietary choices made by the guests today." },
+            '4': { name: "Living Area", desc: "Decorated in 'Billionaire Chic'—which apparently means uncomfortable chairs made of sharp glass and geometric brushed steel. A massive, horrifyingly abstract painting dominates the far wall. The room lacks any human warmth." },
+            '5': { name: "Bio-Hacking Lab", desc: "Silas's quest for immortality, visualized. Centrifuges, empty IV drip bags of 'vitamin cocktails', and a hyperbaric chamber sit under unnervingly bright surgical lights. It smells faintly of antiseptic and desperation." },
+            '6': { name: "Zen Garden", desc: "An indoor, climate-controlled faux-Japanese garden. The sand is perfectly raked into concentric circles around a ridiculously heavy bonsai tree. The forced tranquility is deeply unsettling given the corpse somewhere in the house." },
+            '7': { name: "Crypto Cave", desc: "Six curved, ultra-wide monitors dominate the desk, displaying endlessly plummeting red financial graphs. A crushed VR headset lies in the corner. The aura of massive, unrecoverable financial loss hangs heavy in the air." },
+            '8': { name: "Master Suite", desc: "A monument to Silas's ego. The bed is the size of a small car, wrapped in black silk sheets. A frankly terrifying portrait of Silas himself hangs above the headboard, his eyes seeming to follow you in the dark." },
+            '9': { name: "Garage", desc: "Echoing acoustics bounce off the matte-black, angular hypercars parked within. Tools are meticulously organized on the walls. A solitary, dark oil stain spreads across the pristine epoxy floor, glinting in the dim light." }
         };
 
+        const itemLore = [
+            { name: "Vintage Katana", desc: "A ridiculously overpriced mall-ninja sword, allegedly signed by an 80s action star. Silas bought it at a charity auction just to outbid a rival." },
+            { name: "Heavy Bronze Award", desc: "A 'Tech Visionary of the Year' trophy. Given how heavy this thing is, Silas probably bought the committee too." },
+            { name: "3D Printed Firearm", desc: "A ghostly white, plastic handgun. Silas printed it 'to prove a point to the feds' on a podcast last year. It looks highly unstable." },
+            { name: "Broken Server Rack", desc: "A heavy, jagged piece of metal torn from a server cabinet. Someone was very, very angry at the blockchain." },
+            { name: "Suspiciously Heavy Bonsai Tree", desc: "It's planted in a solid lead pot. Why? 'Radiation shielding for the roots,' Silas once claimed. The man was paranoid." },
+            { name: "Jailbroken Smart-Toaster", desc: "It has a screen currently displaying the weather in Tokyo and a running ticker of Silas's net worth. It weighs about 15 pounds." }
+        ];
+
+        const ambientHallwayTexts = [
+            "A smart-bulb flickers ominously overhead, failing to connect to the house's mesh network.",
+            "You hear the faint, pathetic sound of a Roomba bumping repeatedly into a wall in the dark.",
+            "You step on a crushed Juul pod. The remnants of a stressed tech-bro.",
+            "The house's central AI whispers softly from a hidden speaker: 'Adjusting ambient humidity for optimal skin hydration.' It's creepy.",
+            "A shadow stretches unnaturally long down the corridor. It's just a coat rack. You hope.",
+            "The floorboards creak. Not the quaint, rustic kind of creak—the sound of million-dollar imported timber settling under stress.",
+            "You catch a faint whiff of expensive cologne and copper."
+        ];
+
+        // --- GAME STATE ---
         const config = {
             tileSize: 20,
             hasWeapon: false,
@@ -193,14 +226,18 @@
         // --- CORE LOGIC ---
         function initGame() {
             const rawSuspects = [
-                { name: "Julian", char: 'J', color: '#ff8800' },
-                { name: "Harper", char: 'H', color: '#ff00ff' },
-                { name: "Elias", char: 'E', color: '#00ff00' },
-                { name: "Aria", char: 'A', color: '#0088ff' },
-                { name: "Marcus", char: 'M', color: '#ffff00' }
+                { name: "Julian", char: 'J', color: '#ff8800', 
+                  script: "Silas getting his throat cut? Honestly, it's a massive market correction. The guy was a total parasite. He rugged my last three token launches, shorted my DAO, and literally laughed at me on a Twitter Space! Am I sad? Bro, I'm practically euphoric. But I didn't flatline him. At the time of the... 'unfortunate event', ALIBI_INSERT" },
+                { name: "Harper", char: 'H', color: '#ff00ff', 
+                  script: "Look, death is just a transition of energy, but Silas had the most severely blocked, toxic sacral chakra I've ever encountered. He actually threatened to sue my crystal-healing brand last week because I said his aura was 'muddled'. So petty. Anyway, I was nowhere near him. ALIBI_INSERT" },
+                { name: "Elias", char: 'E', color: '#00ff00', 
+                  script: "Silas Vance was a brilliant checkbook attached to a woefully mediocre intellect. When he abruptly cut my genomic research funding yesterday—calling my pursuit of cellular immortality a 'money pit'—he proved his evolutionary short-sightedness. His demise is inconvenient, but hardly a tragedy. For the record, ALIBI_INSERT" },
+                { name: "Aria", char: 'A', color: '#0088ff', 
+                  script: "Ugh, please. Silas was my step-brother and an arrogant, insufferable prick who thought he owned the world. Now I inherit his shares, so... oops? I couldn't care less that he's gone, and I'm certainly not going to cry for your little notepad. If you must know, ALIBI_INSERT" },
+                { name: "Marcus", char: 'M', color: '#ffff00', 
+                  script: "You think I did it?! Silas stole my proprietary neural-net architecture and patented it under his own name! The man was a corporate thief who treated his engineers like disposable hardware. I'm glad somebody finally debugged him permanently. But it wasn't me! ALIBI_INSERT" }
             ].sort(() => 0.5 - Math.random());
 
-            // 1. Assign Roles & Alibis (The Logic Engine)
             suspects = rawSuspects.map(s => ({ ...s, hasQuestioned: false, isMurderer: false, x:0, y:0 }));
             suspects[0].isMurderer = true;
 
@@ -209,38 +246,37 @@
             const alone1 = innocents[2], alone2 = innocents[3];
             const killer = suspects.find(s => s.isMurderer);
 
-            // Pick 4 distinct rooms for the truth
             let availableRooms = ['1','2','3','4','5','6','7','8','9'].sort(() => 0.5 - Math.random());
             let roomPair = availableRooms[0];
             let roomAlone1 = availableRooms[1];
             let roomAlone2 = availableRooms[2];
-            config.murderRoomId = availableRooms[3]; // The actual crime scene
+            config.murderRoomId = availableRooms[3]; 
 
-            // Generate the rock-solid alibi statements
-            pair1.alibi = `I was in the ${roomDictionary[roomPair]}. I was chatting with ${pair2.name} the whole time.`;
-            pair2.alibi = `I was in the ${roomDictionary[roomPair]}. ${pair1.name} and I were together. Neither of us left.`;
-            alone1.alibi = `I was in the ${roomDictionary[roomAlone1]}. I was completely alone.`;
-            alone2.alibi = `I was in the ${roomDictionary[roomAlone2]}. Just me by myself.`;
+            // ALIBI GENERATION
+            pair1.alibi = `I was chilling in the ${roomDictionary[roomPair].name}. I was there talking to ${pair2.name} the entire night. We never left.`;
+            pair2.alibi = `I was stuck in the ${roomDictionary[roomPair].name}. ${pair1.name} and I were together the whole time. Neither of us stepped out.`;
+            alone1.alibi = `I was in the ${roomDictionary[roomAlone1].name}. Just me, completely alone. I didn't see anyone.`;
+            alone2.alibi = `I was hiding out in the ${roomDictionary[roomAlone2].name}. I was by myself the entire time.`;
 
-            // Murderer explicitly lies, contradicting someone
             let lieTarget = innocents[Math.floor(Math.random() * innocents.length)];
             if (lieTarget === pair1 || lieTarget === pair2) {
-                killer.alibi = `I was in the ${roomDictionary[roomPair]}. I hung out with ${pair1.name} and ${pair2.name}.`; // Contradicts pair who only saw each other
+                killer.alibi = `I was hanging out in the ${roomDictionary[roomPair].name}. I was there with ${pair1.name} and ${pair2.name}.`; 
             } else {
-                killer.alibi = `I was in the ${roomDictionary[lieTarget.trueRoom || (lieTarget===alone1?roomAlone1:roomAlone2)]}. I was there talking to ${lieTarget.name}.`; // Contradicts lone person
+                let lieRoom = (lieTarget === alone1) ? roomAlone1 : roomAlone2;
+                killer.alibi = `I was in the ${roomDictionary[lieRoom].name}. I was there hanging out with ${lieTarget.name}.`; 
             }
 
-            // 2. Spawn Entities
             suspects.forEach(s => spawnInRandomValidSpace(s));
             
-            const itemNames = ["Vintage Katana", "Bronze Award", "3D Firearm", "Server Rack", "Abstract Sculpture"];
-            itemNames.sort(() => 0.5 - Math.random()).forEach((name, i) => {
-                let item = { name: name, isWeapon: (i === 0), x:0, y:0 };
+            let shuffledItems = itemLore.sort(() => 0.5 - Math.random()).slice(0, 5);
+            shuffledItems.forEach((itemObj, i) => {
+                let item = { ...itemObj, isWeapon: (i === 0), x:0, y:0 };
                 spawnInRandomValidSpace(item);
                 items.push(item);
             });
 
-            printText('<span class="system-msg">>>> SYSTEM BOOT: SLEUTH v2.6. Use D-Pad or Arrow Keys to navigate. You must stand adjacent to suspects or objects to interact. Question suspects, find the murder scene, locate the weapon, and gather everyone to make your accusation.</span>');
+            printText('<span class="system-msg" style="color:var(--accent-color); font-weight:bold; font-size:1.2em;">>>> SYSTEM BOOT: SLEUTH OS v2026</span>');
+            printText('<span class="system-msg">Silas Vance, billionaire tech-tycoon, has been murdered in his own smart-mansion. You are the lead detective.<br><br><b>YOUR DIRECTIVES:</b><br>1. Explore the dark mansion (Use D-Pad/Arrows).<br>2. <b>INTERACT</b> when next to objects or suspects.<br>3. Interrogate the suspects. Their rich dialogue holds their alibis. Find the contradiction.<br>4. <b>SEARCH</b> rooms to find the bloody crime scene.<br>5. Find the Murder Weapon.<br>6. Gather everyone at the scene and Accuse the liar.<br><br><i>Warning: Finding the weapon triggers the killer\'s panic response. Do not linger.</i></span>');
             renderMap();
             updateUI();
         }
@@ -252,9 +288,7 @@
                 let ry = Math.floor(Math.random() * 15);
                 let tile = mapLayout[ry][rx];
                 if (tile !== 'W' && tile !== 'D') {
-                    entity.x = rx;
-                    entity.y = ry;
-                    placed = true;
+                    entity.x = rx; entity.y = ry; placed = true;
                 }
             }
         }
@@ -265,81 +299,83 @@
 
         function isVisible(tx, ty) {
             let dist = Math.hypot(player.x - tx, player.y - ty);
-            if (dist <= 1.5) return true; // Always see immediately adjacent
-            
+            if (dist <= 1.5) return true; 
             let pTile = mapLayout[player.y][player.x];
             let tTile = mapLayout[ty][tx];
-            
-            // If inside a room, see the whole room
             if (pTile >= '1' && pTile <= '9' && pTile === tTile) return true;
-            // General flashlight radius
             if (dist <= 3) return true;
-            
             return false;
         }
 
         function renderMap() {
-            ctx.fillStyle = '#000';
+            ctx.fillStyle = '#050505';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw map
             for (let y = 0; y < 15; y++) {
                 for (let x = 0; x < 15; x++) {
-                    if (!isVisible(x, y) && !config.isGathered) continue; // Fog of war
+                    if (!isVisible(x, y) && !config.isGathered) continue; 
                     
                     let tile = mapLayout[y][x];
                     let px = x * config.tileSize;
                     let py = y * config.tileSize;
 
                     if (tile === 'W') {
-                        ctx.fillStyle = '#003344';
+                        ctx.fillStyle = '#0a1a2a'; // Deep neon blue walls
                         ctx.fillRect(px, py, config.tileSize, config.tileSize);
+                        ctx.strokeStyle = '#003355';
+                        ctx.strokeRect(px, py, config.tileSize, config.tileSize);
                     } else if (tile === 'D') {
-                        ctx.fillStyle = '#442200';
+                        ctx.fillStyle = '#aa5500';
                         ctx.fillRect(px, py, config.tileSize, config.tileSize);
                     } else if (tile >= '1' && tile <= '9') {
-                        ctx.fillStyle = '#111'; // Room floor
+                        ctx.fillStyle = '#111'; 
                         ctx.fillRect(px, py, config.tileSize, config.tileSize);
                         if (tile === config.murderRoomId && config.crimeSceneFound) {
-                            ctx.fillStyle = 'rgba(255,0,0,0.2)'; // Blood stain
+                            ctx.fillStyle = 'rgba(200, 0, 0, 0.25)'; 
                             ctx.fillRect(px, py, config.tileSize, config.tileSize);
                         }
                     } else {
-                        ctx.fillStyle = '#222'; // Hallway
+                        ctx.fillStyle = '#151515'; 
                         ctx.fillRect(px, py, config.tileSize, config.tileSize);
+                        // Add subtle grid dots for hallway
+                        ctx.fillStyle = '#333';
+                        ctx.fillRect(px + 9, py + 9, 2, 2);
                     }
                 }
             }
 
-            // Draw Items
             items.forEach(item => {
                 if (isVisible(item.x, item.y)) {
-                    ctx.fillStyle = '#aaa';
-                    ctx.fillRect(item.x * config.tileSize + 5, item.y * config.tileSize + 5, 10, 10);
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.moveTo(item.x*config.tileSize + 10, item.y*config.tileSize + 4);
+                    ctx.lineTo(item.x*config.tileSize + 16, item.y*config.tileSize + 16);
+                    ctx.lineTo(item.x*config.tileSize + 4, item.y*config.tileSize + 16);
+                    ctx.fill();
                 }
             });
 
-            // Draw Suspects
             suspects.forEach(s => {
                 if (isVisible(s.x, s.y) || config.isGathered) {
                     ctx.fillStyle = s.color;
                     ctx.beginPath();
-                    ctx.arc(s.x * config.tileSize + 10, s.y * config.tileSize + 10, 6, 0, Math.PI*2);
+                    ctx.arc(s.x * config.tileSize + 10, s.y * config.tileSize + 10, 7, 0, Math.PI*2);
                     ctx.fill();
                     ctx.fillStyle = '#000';
-                    ctx.font = '10px monospace';
-                    ctx.fillText(s.char, s.x * config.tileSize + 7, s.y * config.tileSize + 13);
+                    ctx.font = 'bold 11px monospace';
+                    ctx.fillText(s.char, s.x * config.tileSize + 6.5, s.y * config.tileSize + 13);
                 }
             });
 
             // Draw Player
-            ctx.fillStyle = varColor('--accent-color');
+            ctx.fillStyle = '#00e6ff';
             ctx.beginPath();
-            ctx.arc(player.x * config.tileSize + 10, player.y * config.tileSize + 10, 6, 0, Math.PI*2);
+            ctx.arc(player.x * config.tileSize + 10, player.y * config.tileSize + 10, 7, 0, Math.PI*2);
             ctx.fill();
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 11px monospace';
+            ctx.fillText('P', player.x * config.tileSize + 6.5, player.y * config.tileSize + 13);
         }
-
-        function varColor(name) { return getComputedStyle(document.body).getPropertyValue(name).trim(); }
 
         // --- MOVEMENT & ACTIONS ---
         function attemptMove(dx, dy) {
@@ -350,8 +386,13 @@
             if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15) {
                 let tile = mapLayout[ny][nx];
                 if (tile !== 'W') {
-                    player.x = nx;
-                    player.y = ny;
+                    player.x = nx; player.y = ny;
+                    
+                    // Ambient Hallway text
+                    if (tile === '.' && Math.random() < 0.1) {
+                        printText(`<hr><span class="ambient-msg">${ambientHallwayTexts[Math.floor(Math.random() * ambientHallwayTexts.length)]}</span>`);
+                    }
+                    
                     advanceTime();
                     renderMap();
                     updateUI();
@@ -360,14 +401,11 @@
         }
 
         function advanceTime() {
-            // Suspect wandering (drastically reduced frequency)
-            if (Math.random() < 0.05 && !config.isGathered) {
+            if (Math.random() < 0.03 && !config.isGathered) {
                 let s = suspects[Math.floor(Math.random() * suspects.length)];
                 let dx = (Math.random() > 0.5 ? 1 : -1) * (Math.random() > 0.5 ? 1 : 0);
                 let dy = (dx === 0) ? (Math.random() > 0.5 ? 1 : -1) : 0;
-                
-                let nx = s.x + dx;
-                let ny = s.y + dy;
+                let nx = s.x + dx; let ny = s.y + dy;
                 if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15 && mapLayout[ny][nx] !== 'W') {
                     s.x = nx; s.y = ny;
                 }
@@ -375,9 +413,10 @@
 
             if (config.hasWeapon && !config.isGathered) {
                 config.jeopardyTimer--;
-                if (config.jeopardyTimer === 4) printText('<span class="danger-msg">WARNING: The killer realizes you took the weapon. They are hunting you!</span>');
+                if (config.jeopardyTimer === 5) printText('<hr><span class="danger-msg">WARNING: The smart-home system chimes. "Unidentified rapid movement detected." The killer knows you have the weapon. They are coming.</span>');
+                if (config.jeopardyTimer === 2) printText('<hr><span class="danger-msg">WARNING: Heavy footsteps sprint down the adjacent corridor! You are running out of time! GATHER THEM AT THE SCENE!</span>');
                 if (config.jeopardyTimer <= 0) {
-                    printText('<span class="danger-msg">CRITICAL FAILURE. The killer ambushed you in the dark. GAME OVER.</span>');
+                    printText('<hr><span class="danger-msg">CRITICAL FAILURE. The door shatters open. The murderer stands there, eyes wild, enraged that you found their weapon. You don\'t even have time to scream. GAME OVER.</span>');
                     config.gameOver = true;
                     updateUI();
                 }
@@ -391,45 +430,65 @@
             let foundSomething = false;
             let pTile = mapLayout[player.y][player.x];
 
-            // 1. Check Suspects Adjacent (Chebyshev distance <= 1)
+            // 1. Suspects
             suspects.forEach(s => {
                 if (Math.abs(s.x - player.x) <= 1 && Math.abs(s.y - player.y) <= 1) {
                     s.hasQuestioned = true;
-                    printText(`> You question <span class="suspect-name">${s.name}</span>.`);
-                    printText(`<span class="alibi-text">"${s.alibi}"</span>`);
+                    let fullDialogue = s.script.replace("ALIBI_INSERT", `<span class="alibi-text">${s.alibi}</span>`);
+                    printText(`<hr>> You corner <span class="suspect-name">${s.name}</span>.<br><br><span class="alibi-text">"${fullDialogue}"</span>`);
                     foundSomething = true;
                 }
             });
 
-            // 2. Check Items Adjacent
+            // 2. Items
             for (let i = items.length - 1; i >= 0; i--) {
                 let item = items[i];
                 if (Math.abs(item.x - player.x) <= 1 && Math.abs(item.y - player.y) <= 1) {
-                    printText(`> You inspect the ${item.name}.`);
+                    printText(`<hr>> You lean down to inspect the <b>${item.name}</b>.`);
+                    printText(`<span class="system-msg">${item.desc}</span>`);
+                    
                     if (item.isWeapon) {
-                        printText(`<span class="danger-msg">DNA DETECTED. THIS IS THE MURDER WEAPON! You take it. (HURRY, GATHER THEM AT THE CRIME SCENE!)</span>`);
+                        printText(`<br><span class="danger-msg">Wait... you shine your phone flashlight on it. It's covered in partially dried blood and fingerprints. THIS IS THE MURDER WEAPON! You bag it immediately. (HURRY, GATHER EVERYONE AT THE CRIME SCENE!)</span>`);
                         config.hasWeapon = true;
-                        config.jeopardyTimer = 10;
-                        items.splice(i, 1); // Remove from map
+                        config.jeopardyTimer = 12;
+                        items.splice(i, 1);
                     } else {
-                        printText(`<span class="system-msg">Clean. Just a normal object.</span>`);
+                        printText(`<br><span class="system-msg">You scan it for DNA. Completely clean. Just a bizarre artifact of extreme wealth.</span>`);
                     }
                     foundSomething = true;
                 }
             }
 
-            // 3. Search Room (if standing inside one)
+            // 3. Search Room
             if (!foundSomething && pTile >= '1' && pTile <= '9') {
                 config.roomExamines[pTile]++;
-                printText(`> You search the ${roomDictionary[pTile]}...`);
+                let room = roomDictionary[pTile];
+                
+                printText(`<hr><div class="room-title">${room.name}</div>`);
+                
+                if (config.roomExamines[pTile] === 1) {
+                    // First search gives the deep lore description
+                    printText(`<span class="system-msg">${room.desc} You begin tossing the room, looking for clues.</span>`);
+                } else {
+                    printText(`> You continue to tear the ${room.name} apart...`);
+                }
+
                 if (pTile === config.murderRoomId && config.roomExamines[pTile] >= 3 && !config.crimeSceneFound) {
                     config.crimeSceneFound = true;
-                    printText('<span class="danger-msg">BINGO! You find a massive pool of drying blood hidden under a rug. This is the CRIME SCENE.</span>');
+                    printText('<br><span class="danger-msg">BINGO! You push aside a heavy piece of furniture and find a massive pool of coagulating blood soaked into the floorboards. The smart-cleaner bots tried to hide it, but failed. This is unequivocally the CRIME SCENE.</span>');
+                } else if (pTile === config.murderRoomId && config.roomExamines[pTile] === 2) {
+                    printText('<span class="ambient-msg">Something is deeply wrong in here. You notice fresh scuff marks on the floor, and the air smells strongly of copper and bleach...</span>');
                 } else {
-                    printText('<span class="system-msg">Nothing out of the ordinary here.</span>');
+                    const failMsgs = [
+                        "You find a stash of expired protein bars, but no clues.",
+                        "You look under the rug. Nothing but dust and shattered tech-dreams.",
+                        "You check behind a painting. Just a wall safe you can't open.",
+                        "You spend ten minutes thoroughly investigating a shadow, which turns out to just be a shadow."
+                    ];
+                    printText(`<span class="system-msg">${failMsgs[Math.floor(Math.random() * failMsgs.length)]}</span>`);
                 }
             } else if (!foundSomething) {
-                printText('<span class="system-msg">There is nothing to interact with nearby. Get closer to people or items.</span>');
+                printText('<hr><span class="system-msg">You wave your hands in the dark empty air. There is absolutely nothing here to interact with. Walk closer to a person or object, or enter a room to search it.</span>');
             }
 
             renderMap();
@@ -439,12 +498,11 @@
         // --- CLIMAX ---
         function triggerGather() {
             config.isGathered = true;
-            printText('<span class="system-msg">>>> LOCKDOWN PROTOCOL INITIATED. All suspects forcefully gathered around your location.</span>');
+            printText('<hr><span class="danger-msg">>>> LOCKDOWN PROTOCOL INITIATED. Heavy steel shutters slam down over the windows. The PA system blares: "ALL GUESTS REPORT TO DETECTIVE\'S LOCATION IMMEDIATELY."</span>');
             
-            // Teleport everyone near player
             suspects.forEach(s => {
-                s.x = player.x + (Math.random() > 0.5 ? 1 : -1);
-                s.y = player.y + (Math.random() > 0.5 ? 1 : -1);
+                s.x = player.x + (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random()*2));
+                s.y = player.y + (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random()*2));
             });
             
             renderMap();
@@ -452,16 +510,16 @@
         }
 
         function accuse(suspect) {
-            printText(`<span class="danger-msg">YOU ACCUSE ${suspect.name.toUpperCase()}!</span>`);
+            printText(`<hr><span class="danger-msg">"IT WAS YOU!" You point the bloody murder weapon squarely at ${suspect.name.toUpperCase()}!</span>`);
             let pTile = mapLayout[player.y][player.x];
 
             if (pTile !== config.murderRoomId || !config.crimeSceneFound) {
-                printText('<span class="danger-msg">FATAL ERROR: You aren\'t at the confirmed crime scene! The killer uses the confusion to escape. GAME OVER.</span>');
+                printText('<br><span class="danger-msg">FATAL ERROR: You dramatically accuse them... in the wrong room. The killer laughs, points out your lack of crime scene evidence, and casually unholsters a concealed weapon. GAME OVER.</span>');
             } else if (suspect.isMurderer) {
-                printText('<span style="color:var(--accent-color); font-weight:bold; font-size: 1.2em;">*** CASE CLOSED ***</span>');
-                printText(`Faced with the weapon at the scene of the crime, you easily expose the contradiction in ${suspect.name}'s alibi. They confess. YOU WIN!`);
+                printText('<br><span style="color:var(--accent-color); font-weight:bold; font-size: 1.4em; text-shadow: 0 0 10px #00e6ff;">*** CASE CLOSED ***</span>');
+                printText(`<br>Standing amidst the blood at the crime scene, you hold up the weapon and dissect their lie. <i>"You couldn't have been where you said you were!"</i> you shout, cross-referencing the airtight alibis of the others.<br><br>${suspect.name}'s arrogant facade shatters entirely. They fall to their knees, sobbing, confessing to everything. The sirens wail in the distance. <b>YOU WIN!</b>`);
             } else {
-                printText(`<span class="danger-msg">INCORRECT. ${suspect.name} is innocent. The real murderer laughs and eliminates you. GAME OVER.</span>`);
+                printText(`<br><span class="danger-msg">INCORRECT. You accused an innocent person. The real murderer, standing right behind you in the lockdown, realizes your sheer incompetence and permanently silences you. GAME OVER.</span>`);
             }
             config.gameOver = true;
             updateUI();
@@ -483,7 +541,7 @@
             if (config.isGathered) {
                 let questioned = suspects.filter(s => s.hasQuestioned);
                 if (questioned.length === 0) {
-                    printText("<span class='danger-msg'>You gathered everyone but haven't questioned ANYONE! You have no evidence. You lose.</span>");
+                    printText("<hr><span class='danger-msg'>You initiated lockdown but haven't questioned ANYONE! You have zero evidence. The billionaire's lawyers will destroy you. You lose.</span>");
                     config.gameOver = true;
                     return;
                 }
@@ -496,7 +554,7 @@
                 });
             } else {
                 let interactBtn = document.createElement('button');
-                interactBtn.innerText = "Interact / Search";
+                interactBtn.innerText = "[SPACEBAR] Interact / Search";
                 interactBtn.onclick = interact;
                 actionsDiv.appendChild(interactBtn);
 
@@ -510,7 +568,6 @@
             }
         }
 
-        // Inputs
         document.getElementById('btn-up').onclick = () => attemptMove(0, -1);
         document.getElementById('btn-down').onclick = () => attemptMove(0, 1);
         document.getElementById('btn-left').onclick = () => attemptMove(-1, 0);
@@ -521,13 +578,9 @@
             if (e.key === 'ArrowDown' || e.key === 's') attemptMove(0, 1);
             if (e.key === 'ArrowLeft' || e.key === 'a') attemptMove(-1, 0);
             if (e.key === 'ArrowRight' || e.key === 'd') attemptMove(1, 0);
-            if (e.key === ' ' || e.key === 'Enter') {
-                e.preventDefault(); 
-                if(!config.isGathered) interact();
-            }
+            if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if(!config.isGathered) interact(); }
         });
 
-        // Start
         initGame();
     </script>
 </body>
