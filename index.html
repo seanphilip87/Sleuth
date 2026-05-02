@@ -7,7 +7,7 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet">
 
     <style>
         :root {
@@ -15,11 +15,12 @@
             --panel-bg: rgba(20, 20, 24, 0.9); 
             --text-main: #E4E4E7; 
             --text-muted: #A1A1AA;
-            --accent-blue: #E879F9; /* Shifted to a sexy neon pink/purple */
+            --accent-blue: #E879F9; /* Neon Purple/Pink */
             --accent-glow: rgba(232, 121, 249, 0.4);
             --danger-red: #F43F5E;
             --danger-glow: rgba(244, 63, 94, 0.4);
             --warning-yellow: #FBBF24;
+            --success-green: #34D399;
             
             --font-ui: 'Inter', sans-serif;
             --font-story: 'Merriweather', serif;
@@ -40,14 +41,17 @@
 
         #game-container { width: 100%; max-width: 600px; display: flex; flex-direction: column; height: 100%; position: relative; }
 
-        /* --- Main Menu Overlay --- */
-        #main-menu {
+        /* --- Fullscreen Overlays (Menu, Tutorial, End Screen) --- */
+        .fullscreen-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color);
             z-index: 100; display: flex; flex-direction: column; padding: 40px 20px; box-sizing: border-box;
-            overflow-y: auto; font-family: var(--font-ui);
+            overflow-y: auto; font-family: var(--font-ui); transition: opacity 0.4s ease;
         }
+        .hidden { display: none !important; opacity: 0; pointer-events: none; }
+
         .menu-title { font-size: 2.5em; font-weight: 800; color: #fff; text-align: center; margin-bottom: 5px; letter-spacing: 4px; text-shadow: 0 0 20px var(--accent-glow);}
-        .menu-subtitle { text-align: center; color: var(--accent-blue); font-size: 1em; margin-bottom: 40px; letter-spacing: 2px;}
+        .menu-subtitle { text-align: center; color: var(--accent-blue); font-size: 1em; margin-bottom: 40px; letter-spacing: 2px; text-transform: uppercase;}
+        
         .theme-select { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
         .theme-btn {
             background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: #fff;
@@ -56,15 +60,26 @@
         }
         .theme-btn.active { background: rgba(232, 121, 249, 0.1); border-color: var(--accent-blue); color: var(--accent-blue); box-shadow: 0 0 15px var(--accent-glow);}
         
-        #start-btn { background: var(--accent-blue); color: #000; font-size: 1.1em; font-weight: 800; padding: 20px; border: none; border-radius: 12px; cursor: pointer; text-transform: uppercase; margin-top: auto; box-shadow: 0 0 20px var(--accent-glow);}
+        .primary-btn { background: var(--accent-blue); color: #000; font-size: 1.1em; font-weight: 800; padding: 20px; border: none; border-radius: 12px; cursor: pointer; text-transform: uppercase; margin-top: auto; box-shadow: 0 0 20px var(--accent-glow); transition: transform 0.1s;}
+        .primary-btn:active { transform: scale(0.96); }
+
+        /* Tutorial Specifics */
+        .tut-block { margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; border-left: 4px solid var(--accent-blue);}
+        .tut-block h3 { color: #fff; margin: 0 0 10px 0; font-size: 1.1em; text-transform: uppercase; letter-spacing: 1px;}
+        .tut-block p { color: var(--text-muted); margin: 0; font-size: 0.95em; line-height: 1.5; font-family: var(--font-story);}
+
+        /* End Screen Specifics */
+        #end-title { font-size: 3em; font-weight: 800; text-align: center; margin-bottom: 10px; text-transform: uppercase; }
+        #end-desc { text-align: center; font-family: var(--font-story); font-size: 1.1em; line-height: 1.6; color: var(--text-muted); margin-bottom: 30px;}
+        .stat-box { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px;}
+        .stat-val { font-size: 2.5em; font-weight: 800; color: #fff; font-family: var(--font-sys); margin: 10px 0;}
+        .stat-label { color: var(--accent-blue); text-transform: uppercase; letter-spacing: 2px; font-size: 0.8em; font-weight: 700;}
 
         /* --- Graphics --- */
         #viewport {
             background: #000; border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex;
             justify-content: center; align-items: center; position: relative; z-index: 10;
-            width: 100%; aspect-ratio: 1 / 1; /* Takes up massive screen space now */
-            max-height: 55vh;
-            overflow: hidden;
+            width: 100%; aspect-ratio: 1 / 1; max-height: 55vh; overflow: hidden;
         }
         canvas { width: 100%; height: 100%; object-fit: contain; }
         
@@ -75,13 +90,13 @@
         }
         #location-hud span { color: var(--accent-blue); }
         
-        #inventory-hud { position: absolute; top: 15px; right: 15px; display: flex; gap: 5px; }
+        #inventory-hud { position: absolute; top: 15px; right: 15px; display: flex; gap: 5px; pointer-events: none;}
         .inv-icon { font-size: 1.5em; opacity: 0.2; transition: all 0.3s; filter: grayscale(100%);}
         .inv-icon.active { opacity: 1; filter: none; text-shadow: 0 0 15px var(--accent-glow);}
 
         /* --- Text Output --- */
         #output { flex-grow: 1; overflow-y: auto; padding: 20px 20px 40px 20px; font-size: 15px; line-height: 1.8; scroll-behavior: smooth; }
-        .output-line { margin-bottom: 20px; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(10px); }
+        .output-line { margin-bottom: 20px; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(10px); }
         @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
 
         .system-boot { font-family: var(--font-sys); color: var(--accent-blue); font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px;}
@@ -95,7 +110,7 @@
         .card-body { color: var(--text-main); }
         .dialogue-text { font-style: italic; color: #E4E4E7; font-size: 1.05em; line-height: 1.6;}
         
-        /* --- Action Controls (No D-Pad) --- */
+        /* --- Action Controls --- */
         #ui-panel { background: var(--panel-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.1); padding: 15px 20px; z-index: 10; padding-bottom: calc(15px + env(safe-area-inset-bottom)); }
         
         .action-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -117,24 +132,51 @@
 </head>
 <body>
 
-    <div id="main-menu">
+    <div id="main-menu" class="fullscreen-overlay">
         <div class="menu-title">SLEUTH</div>
-        <div class="menu-subtitle">GLAMOUR & GORE</div>
-        
+        <div class="menu-subtitle">GAME OF THE YEAR EDITION</div>
         <div class="theme-select" id="theme-options">
-            <button class="theme-btn active" data-theme="tech">Sleuth 2026: Silicon Valley Sin <span>✓</span></button>
-            <button class="theme-btn" data-theme="classic">Manor House: Aristocratic Affairs <span></span></button>
-            <button class="theme-btn" data-theme="hollywood">Hollywood: Red Carpet Homicide <span></span></button>
+            <button class="theme-btn active" data-theme="tech">Silicon Valley Sin <span>✓</span></button>
+            <button class="theme-btn" data-theme="classic">Aristocratic Affairs <span></span></button>
+            <button class="theme-btn" data-theme="hollywood">Red Carpet Homicide <span></span></button>
         </div>
-        <button id="start-btn">Enter The Crime Scene</button>
+        <button id="btn-to-tutorial" class="primary-btn">Initialize Case</button>
+    </div>
+
+    <div id="tutorial-screen" class="fullscreen-overlay hidden">
+        <div class="menu-title" style="font-size: 1.8em; text-shadow:none;">DETECTIVE BRIEFING</div>
+        <div class="menu-subtitle">Listen up, Gumshoe.</div>
+        
+        <div class="tut-block">
+            <h3>1. Movement is Modern</h3>
+            <p>We fired the guy who made the clunky D-Pad. To move through the mansion, literally just <b>SWIPE</b> your thumb across the map, or tap the adjacent room you want to enter.</p>
+        </div>
+        <div class="tut-block">
+            <h3>2. Trust Nothing</h3>
+            <p>If you find a bloody item, don't bag it immediately like a rookie. You need to <b>Search Rooms</b> until you find the hidden <i>Forensic Magnifier</i> to prove it isn't a red herring. If you take the real weapon, the killer will realize it and hunt you down. You will have 25 moves to survive.</p>
+        </div>
+        <div class="tut-block">
+            <h3>3. Piss People Off (Carefully)</h3>
+            <p>Everyone lies. When you interrogate someone, <b>Probe Deeper</b> to make them sweat. They will get defensive, and eventually, they will crack and reveal their secret affairs. But probe a fourth time? They will legally ruin you and stop talking forever.</p>
+        </div>
+        <button id="btn-start-game" class="primary-btn">Drop Me In</button>
+    </div>
+
+    <div id="end-screen" class="fullscreen-overlay hidden">
+        <div id="end-title"></div>
+        <div id="end-desc"></div>
+        <div class="stat-box">
+            <div class="stat-label">Time on Case</div>
+            <div class="stat-val" id="end-time">00:00</div>
+            <div class="stat-label" id="end-highscore" style="color:var(--text-muted); font-size:0.7em; margin-top:5px;"></div>
+        </div>
+        <button id="btn-restart" class="primary-btn">Take Another Case</button>
     </div>
 
     <div id="game-container">
         <div id="viewport">
             <div id="location-hud">LOC: <span id="loc-name">Corridor</span></div>
-            <div id="inventory-hud">
-                <span id="inv-mag" class="inv-icon" title="Magnifying Glass">🔍</span>
-            </div>
+            <div id="inventory-hud"><span id="inv-mag" class="inv-icon" title="Magnifying Glass">🔍</span></div>
             <canvas id="gameCanvas" width="400" height="400"></canvas>
         </div>
         <div id="output"></div>
@@ -148,8 +190,10 @@
         // --- AUDIO ENGINE ---
         let audioCtx;
         function initAudio() {
-            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if(audioCtx.state === 'suspended') audioCtx.resume();
+            try {
+                if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+            } catch (e) { console.warn("Audio Context not supported"); }
         }
 
         function playHeartbeat() {
@@ -174,46 +218,40 @@
             tech: {
                 victim: "Silas Vance",
                 rooms: {
-                    '1': { name: "Sensory Deprivation Tank", desc: "A sleek, egg-shaped pod glows ominously in the dark. Smells like salt and massive ego." },
-                    '2': { name: "VR Pleasure Dome", desc: "Plush velvet cushions cover the floor. Tangled haptic-feedback suits lie abandoned in the corner." },
-                    '3': { name: "Micro-Dosing Kitchen", desc: "A sterile marble island covered in unlabeled tinctures and very expensive matcha powder." },
-                    '4': { name: "Polycule Lounge", desc: "An impossibly large, curved sofa. Empty champagne flutes and crushed dreams are everywhere." },
-                    '5': { name: "Bio-Hacking Lab", desc: "Centrifuges and illegal anti-aging serums sit under unnervingly bright surgical lights." },
-                    '6': { name: "Zen Garden", desc: "Bonsai trees and perfectly raked sand. The tranquility is ruined by the tension in the air." },
-                    '7': { name: "Crypto Cave", desc: "Monitors display endlessly plummeting red financial graphs. The stench of financial ruin is palpable." },
-                    '8': { name: "Master Boudoir", desc: "Black silk sheets tossed violently aside. A terrifying portrait of the victim hangs above the bed." },
-                    '9': { name: "Showroom Garage", desc: "Echoing acoustics bounce off matte-black hypercars. A solitary oil stain glints in the dim light." }
+                    '1': { name: "Deprivation Tank", desc: "A sleek pod glows ominously. Smells like salt and massive ego." },
+                    '2': { name: "VR Pleasure Dome", desc: "Plush velvet cushions. Tangled haptic suits lie abandoned." },
+                    '3': { name: "Micro-Dosing Kitchen", desc: "A sterile marble island covered in unlabeled tinctures." },
+                    '4': { name: "Polycule Lounge", desc: "An impossibly large sofa. Empty champagne flutes everywhere." },
+                    '5': { name: "Bio-Hacking Lab", desc: "Centrifuges and illegal serums sit under bright lights." },
+                    '6': { name: "Zen Garden", desc: "Bonsai trees and perfectly raked sand. Deeply unsettling." },
+                    '7': { name: "Crypto Cave", desc: "Monitors display endlessly plummeting red financial graphs." },
+                    '8': { name: "Master Boudoir", desc: "Black silk sheets tossed violently aside." },
+                    '9': { name: "Showroom Garage", desc: "Echoing acoustics bounce off matte-black hypercars." }
                 },
                 items: [
-                    { name: "Vintage Katana", desc: "A ridiculously overpriced mall-ninja sword bought at a charity gala." },
-                    { name: "Solid Gold Ledger", desc: "A heavy, gaudy cold-storage crypto wallet." },
+                    { name: "Vintage Katana", desc: "A ridiculously overpriced mall-ninja sword." },
+                    { name: "Solid Gold Ledger", desc: "A gaudy cold-storage crypto wallet." },
                     { name: "Chef's Cleaver", desc: "A massive, terrifying culinary knife." },
                     { name: "Shattered VR Headset", desc: "Jagged glass and plastic. Someone was incredibly angry." },
-                    { name: "Heavy Lead Bonsai", desc: "Planted in a solid lead pot to 'block the 5G'." }
+                    { name: "Lead Bonsai Pot", desc: "Solid lead to 'block the 5G'. Impossibly heavy." }
                 ],
                 suspects: [
-                    { name: "Julian", char: 'J', color: '#FBBF24' },
-                    { name: "Harper", char: 'H', color: '#E879F9' },
-                    { name: "Elias", char: 'E', color: '#34D399' },
-                    { name: "Aria", char: 'A', color: '#60A5FA' },
-                    { name: "Marcus", char: 'M', color: '#F87171' }
+                    { name: "Julian", char: 'J', color: '#FBBF24' }, { name: "Harper", char: 'H', color: '#E879F9' }, { name: "Elias", char: 'E', color: '#34D399' }, { name: "Aria", char: 'A', color: '#60A5FA' }, { name: "Marcus", char: 'M', color: '#F87171' }
                 ],
                 dialogueTemplate: {
                     0: "Darling, please. The man was a bore in the boardroom and a disappointment in the bedroom. I was busy elsewhere. ALIBI_INSERT",
-                    1: "My, my, Detective. Are you always this pushy, or is it just me? You're making me sweat, and this silk is dry-clean only. Look, I might have omitted a tiny detail...",
+                    1: "My, my, Detective. Are you always this pushy? You're making me sweat, and this silk is dry-clean only. Look, I might have omitted a tiny detail...",
                     2_secret: "Fine! You broke me! I wasn't alone. ALIBI_INSERT Are you happy now? Keep it out of the tabloids!",
                     2_normal: "I swear on my offshore trust fund, I've told you the absolute truth! Now be a good detective and go bother someone else.",
                     3: "I'm done playing your little games. My lawyer charges $2000 an hour and he's on speed dial. Ta-ta."
                 },
-                ambient: ["You hear a faint, synthetic moan from the smart-speakers.", "The floorboards creak under the weight of excessive wealth.", "You step on a crushed vape pen.", "The AI whispers: 'Adjusting ambient mood lighting to: Melancholy.'"]
+                ambient: ["You hear a faint, synthetic moan from the smart-speakers.", "The floorboards creak under the weight of excessive wealth.", "You step on a crushed vape pen."]
             },
             classic: {
                 victim: "Lord Blackwood",
-                rooms: { '1':{name:"Grand Hall",desc:"A sweeping mahogany staircase. Suits of armor stand silent watch."}, '2':{name:"Library",desc:"Dusty tomes and the scent of fine brandy and illicit affairs."}, '3':{name:"Kitchens",desc:"Copper pots hang above a massive iron stove. The fire has died down."}, '4':{name:"Conservatory",desc:"Overgrown exotic ferns choke the glass room. It's dreadfully humid."}, '5':{name:"Billiard Room",desc:"A green baize table. Cigar ash is scattered carelessly."}, '6':{name:"Smoking Room",desc:"Thick velvet curtains and the stale scent of Cuban cigars."}, '7':{name:"Dining Room",desc:"A long table set for twelve. The crystal gleams in the dark."}, '8':{name:"Master Bedroom",desc:"An opulent four-poster bed. A safe in the corner is hanging open."}, '9':{name:"Wine Cellar",desc:"Damp, dark, and freezing cold. A perfect place to hide a body."} },
-                items: [{name:"Silver Letter Opener",desc:"Exceptionally sharp. Bears the family crest."},{name:"Fireplace Poker",desc:"Solid wrought iron. Brutal and heavy."},{name:"Hunting Knife",desc:"A serrated blade from the armory."},{name:"Marble Bust",desc:"A remarkably heavy sculpture of a forgotten ancestor."},{name:"Braided Silk Scarf",desc:"An elegant fabric. Pulled taut, it's deadly."}],
-                suspects: [
-                    {name:"Eleanor", char:'E', color:'#3B82F6'}, {name:"Col. Fitz", char:'C', color:'#FBBF24'}, {name:"Marigold", char:'M', color:'#E879F9'}, {name:"Arthur", char:'A', color:'#34D399'}, {name:"Jeeves", char:'J', color:'#A1A1AA'}
-                ],
+                rooms: { '1':{name:"Grand Hall",desc:"A sweeping mahogany staircase."}, '2':{name:"Library",desc:"Dusty tomes and the scent of illicit affairs."}, '3':{name:"Kitchens",desc:"Copper pots hang above a massive stove."}, '4':{name:"Conservatory",desc:"Overgrown exotic ferns. It's dreadfully humid."}, '5':{name:"Billiard Room",desc:"A green baize table. Cigar ash is scattered carelessly."}, '6':{name:"Smoking Room",desc:"Thick velvet curtains and Cuban cigars."}, '7':{name:"Dining Room",desc:"A long table. The crystal gleams in the dark."}, '8':{name:"Master Bedroom",desc:"An opulent bed. A safe in the corner is hanging open."}, '9':{name:"Wine Cellar",desc:"Damp, dark, and freezing cold."} },
+                items: [{name:"Silver Letter Opener",desc:"Exceptionally sharp."},{name:"Fireplace Poker",desc:"Solid wrought iron. Brutal."},{name:"Hunting Knife",desc:"A serrated blade from the armory."},{name:"Marble Bust",desc:"A remarkably heavy sculpture."},{name:"Braided Silk Scarf",desc:"Pulled taut, it's deadly."}],
+                suspects: [ {name:"Eleanor", char:'E', color:'#60A5FA'}, {name:"Col. Fitz", char:'C', color:'#FBBF24'}, {name:"Marigold", char:'M', color:'#E879F9'}, {name:"Arthur", char:'A', color:'#34D399'}, {name:"Jeeves", char:'J', color:'#A1A1AA'} ],
                 dialogueTemplate: {
                     0: "The Lord has perished? How dreadful. Though, the man couldn't pleasure a widow if he came with instructions. ALIBI_INSERT",
                     1: "Detective! It is highly improper for you to press a person of my standing so firmly! Though... I suppose I do have a confession.",
@@ -221,15 +259,13 @@
                     2_normal: "On my family's honor, I was exactly where I stated! I shall not be interrogated like a common footpad!",
                     3: "I shall have you thrown off the estate immediately! Good day to you!"
                 },
-                ambient: ["A grandfather clock ticks loudly in the silence.", "A cold draft howls down the corridor.", "A floorboard groans beneath you.", "You catch the faint scent of pipe tobacco and cheap perfume."]
+                ambient: ["A grandfather clock ticks loudly.", "A cold draft howls down the corridor.", "You catch the faint scent of pipe tobacco."]
             },
             hollywood: {
                 victim: "Rex Sterling",
-                rooms: { '1':{name:"Champagne Grotto",desc:"An infinity pool with a hidden cave. Smells of chlorine and bad decisions."}, '2':{name:"Screening Room",desc:"Plush stadium seating. No one would hear a scream in here."}, '3':{name:"Chef's Kitchen",desc:"Acres of white marble. Nobody actually cooks here."}, '4':{name:"Sunken Lounge",desc:"A velvet couch surrounds a fire pit. Empty martini glasses everywhere."}, '5':{name:"Yoga Studio",desc:"Mirrored walls. A faint smell of sage and highly expensive sweat."}, '6':{name:"Wine Vault",desc:"A glass-enclosed room containing immense liquid wealth."}, '7':{name:"Glam Room",desc:"Ring lights and vanity mirrors. White powder is dusted across the counter."}, '8':{name:"Master Suite",desc:"A sprawling bed. The silk sheets are violently tossed aside."}, '9':{name:"Six-Car Garage",desc:"Pristine showroom of sports cars. The hum of a charger is the only sound."} },
-                items: [{name:"Golden Statuette",desc:"An Academy Award. It weighs 8 pounds of solid metal."},{name:"Smashed Bottle",desc:"Jagged green glass from a $2,000 vintage."},{name:"Prop Sword",desc:"From a fantasy blockbuster. Alarmingly sharp."},{name:"Decorative Dagger",desc:"A sharp prop from a vanity project."}, {name:"Platinum Trophy",desc:"A music industry award with sharp edges."}],
-                suspects: [
-                    {name:"Chase", char:'C', color:'#60A5FA'}, {name:"Chloe", char:'H', color:'#E879F9'}, {name:"Damien", char:'D', color:'#FBBF24'}, {name:"Sloane", char:'S', color:'#34D399'}, {name:"Jax", char:'J', color:'#F87171'}
-                ],
+                rooms: { '1':{name:"Champagne Grotto",desc:"An infinity pool with a hidden cave."}, '2':{name:"Screening Room",desc:"No one would hear a scream in here."}, '3':{name:"Chef's Kitchen",desc:"Acres of white marble. Nobody cooks here."}, '4':{name:"Sunken Lounge",desc:"Empty martini glasses everywhere."}, '5':{name:"Yoga Studio",desc:"Mirrored walls. Smells of highly expensive sweat."}, '6':{name:"Wine Vault",desc:"A glass-enclosed room of liquid wealth."}, '7':{name:"Glam Room",desc:"White powder is dusted across the vanity counter."}, '8':{name:"Master Suite",desc:"The silk sheets are violently tossed aside."}, '9':{name:"Six-Car Garage",desc:"Pristine showroom. The hum of a charger is the only sound."} },
+                items: [{name:"Golden Statuette",desc:"An Academy Award. It weighs 8 pounds."},{name:"Smashed Bottle",desc:"Jagged green glass from a vintage."}, {name:"Prop Sword",desc:"From a fantasy blockbuster. Alarmingly sharp."},{name:"Decorative Dagger",desc:"A sharp prop from a vanity project."}, {name:"Platinum Trophy",desc:"A music industry award with sharp edges."}],
+                suspects: [ {name:"Chase", char:'C', color:'#60A5FA'}, {name:"Chloe", char:'H', color:'#E879F9'}, {name:"Damien", char:'D', color:'#FBBF24'}, {name:"Sloane", char:'S', color:'#34D399'}, {name:"Jax", char:'J', color:'#F87171'} ],
                 dialogueTemplate: {
                     0: "Rex was a sweaty pig who promised leading roles and delivered trauma. I was busy being fabulous. ALIBI_INSERT",
                     1: "You're kind of cute when you're aggressive. Look, Hollywood is all smoke and mirrors, baby. Maybe I wasn't entirely truthful...",
@@ -237,24 +273,17 @@
                     2_normal: "I'm a terrible actor, so you know I'm telling the truth right now! I was exactly where I said!",
                     3: "My publicist is going to ruin you. Get out of my eyeline before I call security."
                 },
-                ambient: ["You hear a helicopter circling over the hills.", "A paparazzi flash goes off outside.", "You step on a discarded VIP wristband.", "You smell expensive perfume and cheap lies."]
+                ambient: ["You hear a helicopter circling over the hills.", "A paparazzi flash goes off outside.", "You smell expensive perfume and cheap lies."]
             }
         };
 
         // --- GAME STATE ---
         const config = {
-            tileSize: 26.66, // 400 / 15 tiles
-            hasWeapon: false,
-            hasMagnifier: false,
-            magnifierRoomId: '',
-            awaitingWeaponChoice: null,
-            interrogationTarget: null,
-            jeopardyTimer: -1,
-            murderRoomId: '',
-            crimeSceneFound: false,
-            isGathered: false,
-            gameOver: false,
-            roomExamines: { '1':0, '2':0, '3':0, '4':0, '5':0, '6':0, '7':0, '8':0, '9':0 }
+            tileSize: 26.66, // 400 / 15
+            hasWeapon: false, hasMagnifier: false, magnifierRoomId: '',
+            awaitingWeaponChoice: null, interrogationTarget: null, jeopardyTimer: -1,
+            murderRoomId: '', crimeSceneFound: false, isGathered: false, gameOver: false,
+            roomExamines: {}, startTime: 0, animFrameId: null
         };
 
         const mapLayout = [
@@ -276,9 +305,7 @@
         ];
 
         let player = { x: 7, y: 10, drawX: 7 * 26.66, drawY: 10 * 26.66 }; 
-        let suspects = [];
-        let items = [];
-        let currentThemeData = null;
+        let suspects = []; let items = []; let currentThemeData = null;
 
         // --- MENU LOGIC ---
         document.querySelectorAll('.theme-btn').forEach(btn => {
@@ -288,26 +315,44 @@
             });
         });
 
-        document.getElementById('start-btn').addEventListener('click', () => {
-            initAudio(); 
+        document.getElementById('btn-to-tutorial').addEventListener('click', () => {
+            initAudio();
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('tutorial-screen').classList.remove('hidden');
+        });
+
+        document.getElementById('btn-start-game').addEventListener('click', () => {
             let selectedBtn = document.querySelector('.theme-btn.active');
             currentThemeData = JSON.parse(JSON.stringify(themes[selectedBtn.dataset.theme])); 
-            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('tutorial-screen').classList.add('hidden');
             initGame();
+        });
+
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            document.getElementById('end-screen').classList.add('hidden');
+            document.getElementById('main-menu').classList.remove('hidden');
+            if (config.animFrameId) cancelAnimationFrame(config.animFrameId);
         });
 
         // --- CORE GAME INITIALIZATION ---
         function initGame() {
+            // Reset state
+            config.hasWeapon = false; config.hasMagnifier = false; config.isGathered = false; config.gameOver = false;
+            config.jeopardyTimer = -1; config.awaitingWeaponChoice = null; config.interrogationTarget = null; config.crimeSceneFound = false;
+            config.roomExamines = { '1':0, '2':0, '3':0, '4':0, '5':0, '6':0, '7':0, '8':0, '9':0 };
+            document.getElementById('inv-mag').classList.remove('active');
+            document.body.classList.remove('jeopardy-active');
+            document.getElementById('output').innerHTML = '';
+            player = { x: 7, y: 10, drawX: 7 * 26.66, drawY: 10 * 26.66 };
+            items = [];
+            config.startTime = Date.now();
+
             let rawSuspects = currentThemeData.suspects.sort(() => 0.5 - Math.random());
             suspects = rawSuspects.map(s => ({ ...s, stage: 0, isMurderer: false, hasSecret: false, x:0, y:0, drawX:0, drawY:0 }));
-            
             suspects[0].isMurderer = true;
 
             const innocents = suspects.filter(s => !s.isMurderer);
-            const pair1 = innocents[0], pair2 = innocents[1];
-            const secretHolder = innocents[2], alone2 = innocents[3];
-            const killer = suspects.find(s => s.isMurderer);
-
+            const pair1 = innocents[0], pair2 = innocents[1], secretHolder = innocents[2], alone2 = innocents[3];
             secretHolder.hasSecret = true; 
 
             let availableRooms = ['1','2','3','4','5','6','7','8','9'].sort(() => 0.5 - Math.random());
@@ -315,16 +360,14 @@
             config.murderRoomId = availableRooms[4]; config.magnifierRoomId = availableRooms[5];
 
             // 3-STAGE ALIBI GENERATION
-            pair1.alibi = `I was tucked away in the ${currentThemeData.rooms[roomPair].name} with ${pair2.name}. We were... keeping each other company.`;
+            pair1.alibi = `I was tucked away in the ${currentThemeData.rooms[roomPair].name} with ${pair2.name}.`;
             pair2.alibi = `I was absolutely trapped in the ${currentThemeData.rooms[roomPair].name}. ${pair1.name} and I didn't leave once.`;
             alone2.alibi = `I was hiding from everyone in the ${currentThemeData.rooms[roomAlone2].name}. Completely by myself.`;
 
-            secretHolder.alibi = `I was in the ${currentThemeData.rooms[roomSecretFake].name}. Just me, completely alone. Innocent as a lamb.`;
+            secretHolder.alibi = `I was in the ${currentThemeData.rooms[roomSecretFake].name}. Just me, completely alone.`;
             secretHolder.secretAlibi = `I was secretly hooking up with ${alone2.name} in the ${currentThemeData.rooms[roomSecretTrue].name}!`;
+            suspects.find(s => s.isMurderer).alibi = `I was hanging out in the ${currentThemeData.rooms[roomPair].name} with ${pair1.name} and ${pair2.name}.`; 
 
-            killer.alibi = `I was hanging out in the ${currentThemeData.rooms[roomPair].name} with ${pair1.name} and ${pair2.name}. Ask them!`; 
-
-            // Assign Dialogue Stages
             suspects.forEach(s => {
                 s.dialogue = {
                     0: currentThemeData.dialogueTemplate[0].replace("ALIBI_INSERT", `<br><br><span style="color:var(--accent-blue);">"${s.alibi}"</span>`),
@@ -336,7 +379,6 @@
                 s.drawX = s.x * config.tileSize; s.drawY = s.y * config.tileSize;
             });
             
-            // Generate Items
             let shuffledItems = currentThemeData.items.sort(() => 0.5 - Math.random()).slice(0, 5);
             shuffledItems.forEach((itemObj, i) => {
                 let item = { ...itemObj, isWeapon: false, isRedHerring: false, isBloody: false, x:0, y:0 };
@@ -345,63 +387,42 @@
                 spawnInRandomValidSpace(item); items.push(item);
             });
 
-            printText(`
-                <div class="system-boot">>>> SYSTEM ACTIVE. CASE: THE ${currentThemeData.victim.toUpperCase()} INCIDENT</div>
-                <div class="ui-card">
-                    <div class="card-header"><span style="display:inline-block; width:8px; height:8px; background:var(--danger-red); border-radius:50%;"></span> Active Directive</div>
-                    <div class="card-title">Homicide Investigation</div>
-                    <div class="card-body" style="font-size: 0.9em;">
-                        ${currentThemeData.victim} has been murdered. You are the lead detective.<br><br>
-                        <b style="color:var(--accent-blue)">YOUR PROTOCOL:</b><br>
-                        1. <b>Swipe</b> on the map or tap an adjacent tile to move.<br>
-                        2. <b>Search Rooms</b> to locate the crime scene and the Forensic Magnifier.<br>
-                        3. <b>Question Suspects</b>. You can <i>Probe Deeper</i> to break their facade, but push too hard and they will shut down permanently.<br>
-                        4. <b>Examine Items</b>. Use the magnifier to spot red herrings.<br>
-                        5. Gather everyone at the scene and Accuse the liar.
-                    </div>
-                </div>
-            `);
-            updateLocationHUD(); requestAnimationFrame(gameLoop); updateUI();
+            printText(`<div class="system-boot">>>> SYSTEM ACTIVE. CASE: ${currentThemeData.victim.toUpperCase()}</div>
+                <div class="ui-card"><div class="card-header"><span style="display:inline-block; width:8px; height:8px; background:var(--danger-red); border-radius:50%;"></span> Directive</div>
+                <div class="card-title">Homicide Investigation</div>
+                <div class="card-body" style="font-size: 0.9em;">Swipe map to move. The clock is ticking.</div></div>`);
+            
+            updateLocationHUD(); config.animFrameId = requestAnimationFrame(gameLoop); updateUI();
         }
 
         function spawnInRandomValidSpace(entity) {
             let placed = false;
             while (!placed) {
                 let rx = Math.floor(Math.random() * 15); let ry = Math.floor(Math.random() * 15);
-                if (mapLayout[ry][rx] !== 'W' && mapLayout[ry][rx] !== 'D') {
-                    entity.x = rx; entity.y = ry; placed = true;
-                }
+                if (mapLayout[ry][rx] !== 'W' && mapLayout[ry][rx] !== 'D') { entity.x = rx; entity.y = ry; placed = true; }
             }
         }
 
         // --- GRAPHICS & LERPING ---
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-
+        const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
         function isVisible(tx, ty) {
-            let dist = Math.hypot(player.x - tx, player.y - ty);
-            if (dist <= 1.5) return true; 
+            let dist = Math.hypot(player.x - tx, player.y - ty); if (dist <= 1.5) return true; 
             let pTile = mapLayout[player.y][player.x]; let tTile = mapLayout[ty][tx];
-            if (pTile >= '1' && pTile <= '9' && pTile === tTile) return true;
-            return false;
+            if (pTile >= '1' && pTile <= '9' && pTile === tTile) return true; return false;
         }
 
-        function lerp(start, end, amt) { return (1 - amt) * start + amt * end; }
-
         function gameLoop() {
-            player.drawX = lerp(player.drawX, player.x * config.tileSize, 0.25);
-            player.drawY = lerp(player.drawY, player.y * config.tileSize, 0.25);
-            suspects.forEach(s => { s.drawX = lerp(s.drawX, s.x * config.tileSize, 0.2); s.drawY = lerp(s.drawY, s.y * config.tileSize, 0.2); });
-            renderMap(); requestAnimationFrame(gameLoop);
+            player.drawX = player.drawX + (player.x * config.tileSize - player.drawX) * 0.25;
+            player.drawY = player.drawY + (player.y * config.tileSize - player.drawY) * 0.25;
+            suspects.forEach(s => { s.drawX = s.drawX + (s.x * config.tileSize - s.drawX) * 0.2; s.drawY = s.drawY + (s.y * config.tileSize - s.drawY) * 0.2; });
+            renderMap(); config.animFrameId = requestAnimationFrame(gameLoop);
         }
 
         function renderMap() {
             ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-
             for (let y = 0; y < 15; y++) {
                 for (let x = 0; x < 15; x++) {
                     let tile = mapLayout[y][x]; let px = x * config.tileSize; let py = y * config.tileSize;
-
                     if (tile === 'W') {
                         ctx.fillStyle = '#111114'; ctx.fillRect(px, py, config.tileSize, config.tileSize);
                         ctx.strokeStyle = '#222228'; ctx.lineWidth = 1; ctx.strokeRect(px, py, config.tileSize, config.tileSize);
@@ -419,24 +440,20 @@
                     }
                 }
             }
-
             items.forEach(item => {
                 if (isVisible(item.x, item.y)) {
                     ctx.fillStyle = '#E4E4E7'; ctx.beginPath();
                     ctx.arc(item.x * config.tileSize + config.tileSize/2, item.y * config.tileSize + config.tileSize/2, 4, 0, Math.PI*2); ctx.fill();
                 }
             });
-
             suspects.forEach(s => {
                 if (isVisible(s.x, s.y) || config.isGathered) {
                     let cx = s.drawX + config.tileSize/2; let cy = s.drawY + config.tileSize/2;
                     ctx.fillStyle = s.stage >= 3 ? '#444' : s.color;
                     ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = '#000'; ctx.font = 'bold 11px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                    ctx.fillText(s.char, cx, cy + 1);
+                    ctx.fillStyle = '#000'; ctx.font = 'bold 11px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s.char, cx, cy + 1);
                 }
             });
-
             let pcx = player.drawX + config.tileSize/2; let pcy = player.drawY + config.tileSize/2;
             ctx.fillStyle = 'var(--accent-blue)'; ctx.beginPath(); ctx.arc(pcx, pcy, 8, 0, Math.PI*2); ctx.fill();
 
@@ -449,157 +466,111 @@
 
         // --- SWIPE & TAP INPUTS ---
         let touchStartX = 0; let touchStartY = 0;
-        canvas.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX; touchStartY = e.changedTouches[0].screenY;
-        });
-        canvas.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false}); // Prevent scroll
+        canvas.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; touchStartY = e.changedTouches[0].screenY; });
+        canvas.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false});
         canvas.addEventListener('touchend', e => {
-            let dx = e.changedTouches[0].screenX - touchStartX;
-            let dy = e.changedTouches[0].screenY - touchStartY;
+            let dx = e.changedTouches[0].screenX - touchStartX; let dy = e.changedTouches[0].screenY - touchStartY;
             if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {
-                if (Math.abs(dx) > Math.abs(dy)) attemptMove(dx > 0 ? 1 : -1, 0);
-                else attemptMove(0, dy > 0 ? 1 : -1);
+                if (Math.abs(dx) > Math.abs(dy)) attemptMove(dx > 0 ? 1 : -1, 0); else attemptMove(0, dy > 0 ? 1 : -1);
             }
         });
         canvas.addEventListener('click', e => {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height;
+            const rect = canvas.getBoundingClientRect(); const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height;
             const cx = (e.clientX - rect.left) * scaleX; const cy = (e.clientY - rect.top) * scaleY;
             const tx = Math.floor(cx / config.tileSize); const ty = Math.floor(cy / config.tileSize);
             if (Math.abs(tx - player.x) + Math.abs(ty - player.y) === 1) attemptMove(tx - player.x, ty - player.y);
         });
 
-        document.addEventListener('keydown', (e) => {
-            if (document.getElementById('main-menu').style.display !== 'none') return;
-            if (e.key === 'ArrowUp' || e.key === 'w') attemptMove(0, -1);
-            if (e.key === 'ArrowDown' || e.key === 's') attemptMove(0, 1);
-            if (e.key === 'ArrowLeft' || e.key === 'a') attemptMove(-1, 0);
-            if (e.key === 'ArrowRight' || e.key === 'd') attemptMove(1, 0);
-        });
-
-        // --- MOVEMENT & TIME ---
+        // --- GAME LOGIC ---
         function attemptMove(dx, dy) {
             if (config.gameOver || config.isGathered || config.awaitingWeaponChoice || config.interrogationTarget) return;
             let nx = player.x + dx; let ny = player.y + dy;
-            
-            if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15) {
-                let tile = mapLayout[ny][nx];
-                if (tile !== 'W') {
-                    player.x = nx; player.y = ny;
-                    if (tile === '.' && Math.random() < 0.1) {
-                        printText(`<div class="ambient-msg">"${currentThemeData.ambient[Math.floor(Math.random() * currentThemeData.ambient.length)]}"</div>`);
-                    }
-                    updateLocationHUD(); advanceTime(); updateUI();
-                }
+            if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15 && mapLayout[ny][nx] !== 'W') {
+                player.x = nx; player.y = ny;
+                if (mapLayout[ny][nx] === '.' && Math.random() < 0.1) printText(`<div class="ambient-msg">"${currentThemeData.ambient[Math.floor(Math.random() * currentThemeData.ambient.length)]}"</div>`);
+                updateLocationHUD(); advanceTime(); updateUI();
             }
         }
 
         function updateLocationHUD() {
             let tile = mapLayout[player.y][player.x];
-            let name = (tile >= '1' && tile <= '9') ? currentThemeData.rooms[tile].name : "Corridor";
-            document.getElementById('loc-name').innerText = name;
+            document.getElementById('loc-name').innerText = (tile >= '1' && tile <= '9') ? currentThemeData.rooms[tile].name : "Corridor";
         }
 
         function advanceTime() {
             if (Math.random() < 0.03 && !config.isGathered) {
                 let s = suspects[Math.floor(Math.random() * suspects.length)];
-                let dx = (Math.random() > 0.5 ? 1 : -1) * (Math.random() > 0.5 ? 1 : 0);
-                let dy = (dx === 0) ? (Math.random() > 0.5 ? 1 : -1) : 0;
+                let dx = (Math.random() > 0.5 ? 1 : -1) * (Math.random() > 0.5 ? 1 : 0); let dy = (dx === 0) ? (Math.random() > 0.5 ? 1 : -1) : 0;
                 let nx = s.x + dx; let ny = s.y + dy;
                 if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15 && mapLayout[ny][nx] !== 'W') { s.x = nx; s.y = ny; }
             }
-
             if (config.hasWeapon && !config.isGathered) {
                 config.jeopardyTimer--;
                 if (config.jeopardyTimer > 0) playHeartbeat(); 
-                
-                if (config.jeopardyTimer === 10) printText('<div class="danger-msg" style="margin-top:10px;">WARNING: A shadow moves in the corridor. They know you took the weapon.</div>');
-                if (config.jeopardyTimer === 4) printText('<div class="danger-msg" style="margin-top:10px; font-size:1em;">WARNING: Frantic footsteps approaching! GATHER THEM AT THE SCENE NOW!</div>');
-                if (config.jeopardyTimer <= 0) {
-                    printText('<div class="ui-card" style="border-color:var(--danger-red);"><div class="card-title" style="color:var(--danger-red)">CRITICAL FAILURE</div><div class="card-body">The murderer bursts from the darkness, enraged that you took their weapon. You are permanently silenced. GAME OVER.</div></div>');
-                    config.gameOver = true; updateUI();
-                }
+                if (config.jeopardyTimer === 10) printText('<div class="danger-msg">WARNING: A shadow moves. They know you took the weapon.</div>');
+                if (config.jeopardyTimer === 4) printText('<div class="danger-msg" style="font-size:1em;">WARNING: Frantic footsteps approaching! GATHER THEM AT THE SCENE NOW!</div>');
+                if (config.jeopardyTimer <= 0) endGame(false, "The murderer bursts from the darkness. You are permanently silenced.");
             }
         }
 
-        // --- SPECIFIC ACTION FUNCTIONS ---
         function searchRoom() {
             if (config.gameOver || config.awaitingWeaponChoice || config.interrogationTarget) return;
             let pTile = mapLayout[player.y][player.x];
-            
             if (pTile >= '1' && pTile <= '9') {
-                config.roomExamines[pTile]++;
-                let room = currentThemeData.rooms[pTile];
+                config.roomExamines[pTile]++; let room = currentThemeData.rooms[pTile];
                 let outHTML = `<div class="ui-card"><div class="card-header">LOCATION SCAN</div><div class="card-title">${room.name}</div><div class="card-body">`;
-                
-                if (config.roomExamines[pTile] === 1) outHTML += `${room.desc} <br><br><span class="system-msg">You toss the room, looking for clues.</span>`;
-                else outHTML += `<span class="system-msg">You continue to tear the room apart...</span>`;
+                outHTML += config.roomExamines[pTile] === 1 ? `${room.desc} <br><br><span class="system-msg">You toss the room.</span>` : `<span class="system-msg">You continue tearing the room apart...</span>`;
 
                 if (pTile === config.murderRoomId && config.roomExamines[pTile] >= 3 && !config.crimeSceneFound) {
-                    config.crimeSceneFound = true;
-                    outHTML += `<br><br><span class="danger-msg">BINGO! You find a massive pool of coagulating blood hidden under a rug. This is unequivocally the CRIME SCENE.</span>`;
+                    config.crimeSceneFound = true; outHTML += `<br><br><span class="danger-msg">BINGO! A massive pool of blood. This is the CRIME SCENE.</span>`;
                 } else if (pTile === config.murderRoomId && config.roomExamines[pTile] === 2) {
-                    outHTML += `<br><br><span class="ambient-msg">Something is deeply wrong. Fresh scuff marks. Smells of copper...</span>`;
+                    outHTML += `<br><br><span class="ambient-msg">Fresh scuff marks. Smells of copper...</span>`;
                 }
                 
                 if (pTile === config.magnifierRoomId && config.roomExamines[pTile] === 1 && !config.hasMagnifier) {
                     config.hasMagnifier = true; document.getElementById('inv-mag').classList.add('active');
-                    outHTML += `<br><br><span style="color:var(--accent-blue); font-weight:bold;">> FORENSIC MAGNIFIER ACQUIRED. You can now analyze blood spatter.</span>`;
+                    outHTML += `<br><br><span style="color:var(--accent-blue); font-weight:bold;">> FORENSIC MAGNIFIER ACQUIRED.</span>`;
                 } else if (config.roomExamines[pTile] > 1 && !(pTile === config.murderRoomId && config.roomExamines[pTile] <= 3)) {
                     outHTML += `<br><br><span class="system-msg">Nothing else of interest.</span>`;
                 }
-                outHTML += `</div></div>`; printText(outHTML);
-            } else { printText(`<div class="system-msg">You search the hallway corridor. It is, indeed, a hallway.</div>`); }
+                printText(outHTML + `</div></div>`);
+            } else printText(`<div class="system-msg">It is, indeed, a hallway.</div>`);
             advanceTime(); updateUI();
         }
 
         function examineItem() {
             if (config.gameOver || config.awaitingWeaponChoice || config.interrogationTarget) return;
             let found = false;
-            
             for (let i = items.length - 1; i >= 0; i--) {
                 let item = items[i];
                 if (Math.abs(item.x - player.x) <= 1 && Math.abs(item.y - player.y) <= 1) {
                     let outHTML = `<div class="ui-card"><div class="card-header">ITEM INSPECTION</div><div class="card-title">${item.name}</div><div class="card-body">${item.desc}</div>`;
-                    
                     if (item.isBloody) {
-                        outHTML += `<div class="card-body" style="margin-top:10px;"><span class="danger-msg">Wait... it's covered in partially dried blood!</span><br><br>`;
-                        if (!config.hasMagnifier) {
-                            outHTML += `<span class="system-msg" style="color:var(--warning-yellow)">Without a magnifier, you can't tell if this is the murder weapon or a red herring. Keep searching rooms!</span></div>`;
-                        } else {
-                            outHTML += `<span class="system-msg">You pull out your magnifier and inspect the spatter...</span><br><br>`;
-                            if (item.isRedHerring) {
-                                outHTML += `<span class="system-msg" style="color:var(--accent-blue)">It's a RED HERRING. The blood pattern is wrong. Just a bizarre coincidence.</span></div>`;
-                                item.isBloody = false; 
-                            } else {
-                                outHTML += `<span class="danger-msg">DNA MATCH CONFIRMED. THIS IS THE MURDER WEAPON!</span><br><br><span class="system-msg" style="color:var(--warning-yellow)">WARNING: If you TAKE it, the killer will realize you have the evidence and hunt you down. You can LEAVE it here for now.</span></div>`;
+                        outHTML += `<div class="card-body" style="margin-top:10px;"><span class="danger-msg">Wait... it's covered in blood!</span><br><br>`;
+                        if (!config.hasMagnifier) outHTML += `<span class="system-msg" style="color:var(--warning-yellow)">Without a magnifier, you can't tell if it's a red herring.</span></div>`;
+                        else {
+                            outHTML += `<span class="system-msg">You pull out your magnifier...</span><br><br>`;
+                            if (item.isRedHerring) { outHTML += `<span class="system-msg" style="color:var(--accent-blue)">It's a RED HERRING. The blood pattern is wrong.</span></div>`; item.isBloody = false; } 
+                            else {
+                                outHTML += `<span class="danger-msg">DNA MATCH. THIS IS THE MURDER WEAPON!</span><br><br><span class="system-msg" style="color:var(--warning-yellow)">WARNING: If you TAKE it, you have 25 moves to gather everyone.</span></div>`;
                                 config.awaitingWeaponChoice = { item: item, index: i };
                             }
                         }
-                    } else { outHTML += `<div class="card-body" style="margin-top:10px;"><span class="system-msg">Completely clean.</span></div>`; }
-                    
-                    outHTML += `</div>`; printText(outHTML); found = true;
+                    } else outHTML += `<div class="card-body" style="margin-top:10px;"><span class="system-msg">Completely clean.</span></div>`;
+                    printText(outHTML + `</div>`); found = true;
                     if (config.awaitingWeaponChoice) { updateUI(); return; }
                 }
             }
-            if (!found) { printText(`<div class="system-msg">There are no scannable items near you.</div>`); }
+            if (!found) printText(`<div class="system-msg">No scannable items near you.</div>`);
             advanceTime(); updateUI();
         }
 
-        // --- INTERROGATION ENGINE ---
         function startQuestioning() {
             if (config.gameOver || config.awaitingWeaponChoice || config.interrogationTarget) return;
-            let target = null;
-            suspects.forEach(s => { if (Math.abs(s.x - player.x) <= 1 && Math.abs(s.y - player.y) <= 1) target = s; });
-            
-            if (!target) { printText(`<div class="system-msg">There is no one standing next to you.</div>`); return; }
-
+            let target = suspects.find(s => Math.abs(s.x - player.x) <= 1 && Math.abs(s.y - player.y) <= 1);
+            if (!target) { printText(`<div class="system-msg">There is no one here.</div>`); return; }
             if (target.stage >= 3) {
-                printText(`
-                    <div class="ui-card" style="border-left: 4px solid #444;">
-                        <div class="card-header">INTERROGATION FAILED</div><div class="card-title" style="color:#888">${target.name}</div>
-                        <div class="card-body dialogue-text">"${target.dialogue[3]}"<br><br><span class="danger-msg">They refuse to answer any more questions.</span></div>
-                    </div>`);
+                printText(`<div class="ui-card" style="border-left: 4px solid #444;"><div class="card-header">INTERROGATION FAILED</div><div class="card-title" style="color:#888">${target.name}</div><div class="card-body dialogue-text">"${target.dialogue[3]}"<br><br><span class="danger-msg">They refuse to answer any more questions.</span></div></div>`);
                 return;
             }
             config.interrogationTarget = target; updateUI(); 
@@ -607,119 +578,89 @@
 
         function executeProbe(isDeep) {
             let s = config.interrogationTarget;
-            
-            if (isDeep) s.stage++; // Pushing harder increments their irritation stage
-
-            let currentStageDialogue = s.dialogue[s.stage];
-            let title = isDeep ? "PROBING DEEPER" : "QUESTIONING";
-            let color = isDeep ? "var(--warning-yellow)" : s.color;
-
-            let outHTML = `
-                <div class="ui-card" style="border-left: 4px solid ${color};">
-                    <div class="card-header">${title}</div><div class="card-title" style="color:${color}">${s.name}</div>
-                    <div class="card-body dialogue-text">"${currentStageDialogue}"`;
-            
-            if (s.stage === 2 && s.hasSecret) {
-                outHTML += `<br><br><span style="color:var(--accent-blue)">>>> NEW ALIBI OBTAINED.</span>`;
-                s.alibi = s.secretAlibi; // Updates logic
-                s.hasSecret = false; 
-            }
-            outHTML += `</div></div>`;
-            printText(outHTML);
-
+            if (isDeep) s.stage++; 
+            let outHTML = `<div class="ui-card" style="border-left: 4px solid ${isDeep ? 'var(--warning-yellow)' : s.color};"><div class="card-header">${isDeep ? "PROBING DEEPER" : "QUESTIONING"}</div><div class="card-title" style="color:${isDeep ? 'var(--warning-yellow)' : s.color}">${s.name}</div><div class="card-body dialogue-text">"${s.dialogue[s.stage]}"`;
+            if (s.stage === 2 && s.hasSecret) { outHTML += `<br><br><span style="color:var(--accent-blue)">>>> NEW ALIBI OBTAINED.</span>`; s.alibi = s.secretAlibi; s.hasSecret = false; }
+            printText(outHTML + `</div></div>`);
             config.interrogationTarget = null; advanceTime(); updateUI();
         }
 
-        function cancelInterrogation() { config.interrogationTarget = null; updateUI(); }
-
-        // --- WEAPON CHOICES ---
         function takeWeapon() {
-            printText(`<div class="danger-msg" style="margin-top:10px;">>>> EVIDENCE ACQUIRED. THE MURDERER KNOWS YOU HAVE IT. YOU HAVE 25 MOVES TO LIVE. GATHER THEM AT THE CRIME SCENE!</div>`);
-            config.hasWeapon = true; config.jeopardyTimer = 25;
-            items.splice(config.awaitingWeaponChoice.index, 1);
-            config.awaitingWeaponChoice = null;
-            document.body.classList.add('jeopardy-active'); 
-            advanceTime(); updateUI();
+            printText(`<div class="danger-msg" style="margin-top:10px;">>>> EVIDENCE ACQUIRED. You have 25 moves to GATHER THEM AT THE CRIME SCENE!</div>`);
+            config.hasWeapon = true; config.jeopardyTimer = 25; items.splice(config.awaitingWeaponChoice.index, 1); config.awaitingWeaponChoice = null;
+            document.body.classList.add('jeopardy-active'); advanceTime(); updateUI();
         }
 
-        function leaveWeapon() {
-            printText(`<div class="system-msg" style="margin-top:10px;">>>> You back away from the bloody weapon, leaving it where it lies.</div>`);
-            config.awaitingWeaponChoice = null; advanceTime(); updateUI();
-        }
-
-        // --- CLIMAX ---
         function triggerGather() {
             config.isGathered = true; document.body.classList.remove('jeopardy-active'); 
-            printText(`<div class="ui-card" style="border-color:var(--danger-red)"><div class="card-header" style="color:var(--danger-red)">SYSTEM OVERRIDE</div><div class="card-body danger-msg">LOCKDOWN PROTOCOL INITIATED. "ALL GUESTS REPORT TO DETECTIVE'S LOCATION IMMEDIATELY."</div></div>`);
-            suspects.forEach(s => {
-                s.x = player.x + (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random()*2));
-                s.y = player.y + (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random()*2));
-            });
+            printText(`<div class="ui-card" style="border-color:var(--danger-red)"><div class="card-header" style="color:var(--danger-red)">SYSTEM OVERRIDE</div><div class="card-body danger-msg">LOCKDOWN PROTOCOL INITIATED.</div></div>`);
+            suspects.forEach(s => { s.x = player.x + (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random()*2)); s.y = player.y + (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random()*2)); });
             updateUI();
         }
 
         function accuse(suspect) {
             let pTile = mapLayout[player.y][player.x];
-            let outHTML = `<div class="ui-card" style="border-left: 4px solid var(--danger-red);"><div class="card-title" style="color:var(--danger-red)">"IT WAS YOU!"</div><div class="card-body">You point the bloody weapon squarely at ${suspect.name.toUpperCase()}!`;
-
-            if (pTile !== config.murderRoomId || !config.crimeSceneFound) {
-                outHTML += `<br><br><span class="danger-msg">FATAL ERROR: You accuse them... in the wrong room. The killer laughs, points out your lack of evidence, and eliminates you. GAME OVER.</span>`;
-            } else if (suspect.isMurderer) {
-                outHTML += `<br><br><span style="color:var(--accent-blue); font-weight:800; font-size:1.2em; font-family:var(--font-ui);">*** CASE CLOSED ***</span><br><br>Standing amidst the blood at the crime scene, you hold up the weapon and dissect their lie. <i>"You couldn't have been where you said you were!"</i> you shout, cross-referencing the airtight alibis of the others.<br><br>${suspect.name}'s facade shatters entirely. They fall to their knees, sobbing, confessing to everything. <b>YOU WIN!</b>`;
-            } else {
-                outHTML += `<br><br><span class="danger-msg">INCORRECT. You accused an innocent person. The real murderer realizes your sheer incompetence and permanently silences you. GAME OVER.</span>`;
-            }
-            outHTML += `</div></div>`;
-            printText(outHTML); config.gameOver = true; updateUI();
+            if (pTile !== config.murderRoomId || !config.crimeSceneFound) endGame(false, `You accused ${suspect.name} in the wrong room. The killer laughs at your lack of evidence and eliminates you.`);
+            else if (suspect.isMurderer) endGame(true, `Standing amidst the blood, you hold up the weapon and dissect their lie. ${suspect.name}'s facade shatters entirely. They fall to their knees, sobbing, confessing to everything.`);
+            else endGame(false, `You accused an innocent person. The real murderer realizes your sheer incompetence and permanently silences you.`);
         }
 
-        // --- UI BINDING ---
-        function printText(html) {
-            const out = document.getElementById('output');
-            const wrap = document.createElement('div');
-            wrap.className = 'output-line'; wrap.innerHTML = html;
-            out.appendChild(wrap); out.scrollTop = out.scrollHeight;
+        // --- ENDGAME & UI ---
+        function endGame(isWin, desc) {
+            config.gameOver = true; updateUI(); document.body.classList.remove('jeopardy-active');
+            let timeMs = Date.now() - config.startTime;
+            let m = Math.floor(timeMs / 60000); let s = Math.floor((timeMs % 60000) / 1000);
+            let timeStr = `${m}m ${s}s`;
+
+            setTimeout(() => {
+                document.getElementById('end-title').innerText = isWin ? "🏆 CASE CLOSED" : "💀 YOU DIED";
+                document.getElementById('end-title').style.color = isWin ? "var(--success-green)" : "var(--danger-red)";
+                document.getElementById('end-desc').innerText = desc;
+                document.getElementById('end-time').innerText = timeStr;
+                
+                let hsText = "";
+                if (isWin) {
+                    let best = localStorage.getItem('sleuth_hs');
+                    if (!best || timeMs < best) { localStorage.setItem('sleuth_hs', timeMs); hsText = "NEW RECORD!"; }
+                    else {
+                        let bm = Math.floor(best / 60000); let bs = Math.floor((best % 60000) / 1000);
+                        hsText = `PERSONAL BEST: ${bm}m ${bs}s`;
+                    }
+                }
+                document.getElementById('end-highscore').innerText = hsText;
+                document.getElementById('end-screen').classList.remove('hidden');
+            }, 1500);
         }
 
         function updateUI() {
-            const actionsDiv = document.getElementById('dynamic-actions');
-            actionsDiv.innerHTML = '';
+            const actionsDiv = document.getElementById('dynamic-actions'); actionsDiv.innerHTML = '';
             if (config.gameOver) return;
 
-            // STATE: Interrogation
             if (config.interrogationTarget) {
                 let qBtn = document.createElement('button'); qBtn.className = 'half-width'; qBtn.innerText = `Standard Question`; qBtn.onclick = () => executeProbe(false);
                 let pBtn = document.createElement('button'); pBtn.className = 'warning-btn'; pBtn.innerText = "Probe Deeper"; pBtn.onclick = () => executeProbe(true);
-                let cBtn = document.createElement('button'); cBtn.className = 'full-width'; cBtn.innerText = "Back Away"; cBtn.onclick = cancelInterrogation;
+                let cBtn = document.createElement('button'); cBtn.className = 'full-width'; cBtn.innerText = "Back Away"; cBtn.onclick = () => { config.interrogationTarget = null; updateUI(); };
                 actionsDiv.appendChild(qBtn); actionsDiv.appendChild(pBtn); actionsDiv.appendChild(cBtn); return;
             }
 
-            // STATE: Weapon Choice
             if (config.awaitingWeaponChoice) {
                 let takeBtn = document.createElement('button'); takeBtn.className = 'danger-btn half-width'; takeBtn.innerText = "TAKE WEAPON"; takeBtn.onclick = takeWeapon;
-                let leaveBtn = document.createElement('button'); leaveBtn.innerText = "LEAVE IT"; leaveBtn.onclick = leaveWeapon;
+                let leaveBtn = document.createElement('button'); leaveBtn.innerText = "LEAVE IT"; leaveBtn.onclick = () => { config.awaitingWeaponChoice = null; advanceTime(); updateUI(); };
                 actionsDiv.appendChild(takeBtn); actionsDiv.appendChild(leaveBtn); return;
             }
 
-            // STATE: Climax Accusation
             if (config.isGathered) {
-                let questioned = suspects.filter(s => s.stage > 0);
-                if (questioned.length === 0) {
-                    printText("<div class='danger-msg' style='margin-top:10px;'>You initiated lockdown but haven't questioned ANYONE! You have zero evidence. You lose.</div>");
-                    config.gameOver = true; return;
-                }
+                let questioned = suspects.filter(s => s.stage > 0 || s.hasQuestioned);
+                if (questioned.length === 0) { endGame(false, "You initiated lockdown but haven't questioned anyone! You have zero evidence."); return; }
                 questioned.forEach(s => {
                     let btn = document.createElement('button'); btn.className = 'danger-btn'; btn.innerText = `Accuse ${s.name}`; btn.onclick = () => accuse(s);
                     actionsDiv.appendChild(btn);
-                });
-                return;
+                }); return;
             } 
             
-            // STATE: Standard Exploration
             let searchBtn = document.createElement('button'); searchBtn.innerText = "Search Room"; searchBtn.onclick = searchRoom;
             let examineBtn = document.createElement('button'); examineBtn.innerText = "Examine Item"; examineBtn.onclick = examineItem;
             let questionBtn = document.createElement('button'); questionBtn.innerText = "Interrogate"; questionBtn.onclick = startQuestioning;
-            
             actionsDiv.appendChild(searchBtn); actionsDiv.appendChild(examineBtn); actionsDiv.appendChild(questionBtn);
 
             if (config.hasWeapon) {
