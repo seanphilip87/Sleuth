@@ -1,38 +1,16 @@
-body {
-    background-color: #000;
-    color: #33ff33; /* Classic DOS green */
-    font-family: 'Courier New', Courier, monospace;
-    display: flex;
-    justify-content: center;
-    padding: 20px;
-}
-
-#game-container {
-    width: 100%;
-    max-width: 800px;
-    height: 80vh;
-    display: flex;
-    flex-direction: column;
-}
-
-#output {
-    flex-grow: 1;
-    overflow-y: auto;
-    margin-bottom: 10px;
-    white-space: pre-wrap; /* Keeps formatting */
-}
-
-#input-line {
-    display: flex;
-}
-
-#command {
-    background: transparent;
-    border: none;
-    color: #33ff33;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 16px;
-    flex-grow: 1;
-    margin-left: 10px;
-    outline: none;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Sleuth Web App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="output"></div>
+        <div id="controls">
+            </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>

@@ -21,25 +21,22 @@ let currentRoom = "hall";
 
 // --- INITIALIZATION ---
 function initGame() {
-    // Randomize murderer
     const murdererIndex = Math.floor(Math.random() * suspects.length);
     suspects[murdererIndex].isMurderer = true;
-    // The murderer lies (simplified for now)
     suspects[murdererIndex].alibi = "I was definitely NOT in the house!"; 
 
-    // Randomize weapon
     const weaponIndex = Math.floor(Math.random() * items.length);
     items[weaponIndex].isWeapon = true;
 
-    printText("Welcome to SLEUTH. A murder has been committed.");
+    printText("Welcome to SLEUTH.\nA murder has been committed.");
     lookRoom();
+    renderBaseControls(); // Load the main menu buttons
 }
 
-// --- CORE FUNCTIONS ---
 function printText(text) {
     const outputDiv = document.getElementById('output');
-    outputDiv.innerHTML += `\n${text}`;
-    outputDiv.scrollTop = outputDiv.scrollHeight; // Scroll to bottom
+    outputDiv.innerHTML += `\n${text}\n`;
+    outputDiv.scrollTop = outputDiv.scrollHeight;
 }
 
 function lookRoom() {
@@ -47,67 +44,97 @@ function lookRoom() {
     printText(`\n--- ${room.name} ---`);
     printText(room.description);
     
-    // Who is here?
     const peopleHere = suspects.filter(s => s.room === currentRoom);
-    if (peopleHere.length > 0) {
-        printText(`You see: ${peopleHere.map(s => s.name).join(", ")}`);
-    }
+    if (peopleHere.length > 0) printText(`You see: ${peopleHere.map(s => s.name).join(", ")}`);
 
-    // What is here?
     const itemsHere = items.filter(i => i.room === currentRoom);
-    if (itemsHere.length > 0) {
-        printText(`Items: ${itemsHere.map(i => i.name).join(", ")}`);
-    }
+    if (itemsHere.length > 0) printText(`Items: ${itemsHere.map(i => i.name).join(", ")}`);
 }
 
-// --- PARSER ---
-function processCommand(input) {
-    const args = input.toLowerCase().trim().split(" ");
-    const command = args[0];
-    const target = args.slice(1).join(" ");
+// --- DYNAMIC UI CONTROLS ---
+const controlsDiv = document.getElementById('controls');
 
-    printText(`\n> ${input}`);
+// Helper function to create buttons
+function createButton(text, onClickFunction) {
+    const btn = document.createElement('button');
+    btn.innerText = text;
+    btn.onclick = onClickFunction;
+    controlsDiv.appendChild(btn);
+}
 
-    if (command === "go") {
-        const room = rooms[currentRoom];
-        if (room[target]) {
-            currentRoom = room[target];
-            lookRoom();
-        } else {
-            printText("You can't go that way.");
+// 1. The Main Menu
+function renderBaseControls() {
+    controlsDiv.innerHTML = ''; // Clear current buttons
+    createButton('Look Around', () => { printText("\n> LOOK"); lookRoom(); });
+    createButton('Move', renderMoveControls);
+    createButton('Examine', renderExamineControls);
+    createButton('Question', renderQuestionControls);
+}
+
+// 2. The Movement Menu
+function renderMoveControls() {
+    controlsDiv.innerHTML = '';
+    const room = rooms[currentRoom];
+    const directions = ['north', 'south', 'east', 'west'];
+    
+    directions.forEach(dir => {
+        if (room[dir]) {
+            createButton(`Go ${dir}`, () => {
+                currentRoom = room[dir];
+                printText(`\n> GO ${dir.toUpperCase()}`);
+                lookRoom();
+                renderBaseControls(); // Go back to main menu after moving
+            });
         }
-    } else if (command === "look") {
-        lookRoom();
-    } else if (command === "examine") {
-        const item = items.find(i => i.name === target && i.room === currentRoom);
-        if (item) {
+    });
+    createButton('[ CANCEL ]', renderBaseControls);
+}
+
+// 3. The Examine Menu
+function renderExamineControls() {
+    controlsDiv.innerHTML = '';
+    const itemsHere = items.filter(i => i.room === currentRoom);
+    
+    if (itemsHere.length === 0) {
+        printText("\n> There is nothing to examine here.");
+        renderBaseControls();
+        return;
+    }
+
+    itemsHere.forEach(item => {
+        createButton(item.name, () => {
+            printText(`\n> EXAMINE ${item.name.toUpperCase()}`);
             if (item.isWeapon) {
-                printText(`You examine the ${item.name}... wait, there are BLOOD STAINS on it! This is the murder weapon!`);
+                printText("Wait... there are BLOOD STAINS on it! This is the murder weapon!");
             } else {
-                printText(`It's just a normal ${item.name}. Nothing suspicious.`);
+                printText("It's just a normal object. Nothing suspicious.");
             }
-        } else {
-            printText("You don't see that here.");
-        }
-    } else if (command === "question") {
-        const suspect = suspects.find(s => s.name.toLowerCase().includes(target) && s.room === currentRoom);
-        if (suspect) {
-            printText(`"${suspect.alibi}"`);
-        } else {
-            printText("They aren't here.");
-        }
-    } else {
-        printText("I don't understand that command. Try 'go [direction]', 'look', 'examine [item]', or 'question [name]'.");
-    }
+            renderBaseControls();
+        });
+    });
+    createButton('[ CANCEL ]', renderBaseControls);
 }
 
-// --- EVENT LISTENERS ---
-document.getElementById('command').addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') {
-        processCommand(this.value);
-        this.value = ''; // Clear input
+// 4. The Questioning Menu
+function renderQuestionControls() {
+    controlsDiv.innerHTML = '';
+    const peopleHere = suspects.filter(s => s.room === currentRoom);
+    
+    if (peopleHere.length === 0) {
+        printText("\n> There is no one here to question.");
+        renderBaseControls();
+        return;
     }
-});
 
-// Start game
+    peopleHere.forEach(suspect => {
+        createButton(suspect.name, () => {
+            printText(`\n> QUESTION ${suspect.name.toUpperCase()}`);
+            printText(`"${suspect.alibi}"`);
+            renderBaseControls();
+        });
+    });
+    createButton('[ CANCEL ]', renderBaseControls);
+}
+
+// Start the game
 initGame();
