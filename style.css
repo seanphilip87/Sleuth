@@ -18,6 +18,36 @@ body {
     flex-direction: column;
 }
 
+#minimap {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.map-room {
+    background-color: #002200;
+    border: 1px solid #115511;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    text-align: center;
+    color: #115511; /* Hidden until visited */
+}
+
+.map-room.visited {
+    color: #33ff33;
+    border: 1px solid #33ff33;
+}
+
+.map-room.active {
+    background-color: #33ff33;
+    color: #000;
+    font-weight: bold;
+}
+
 #output {
     flex-grow: 1;
     overflow-y: auto;
