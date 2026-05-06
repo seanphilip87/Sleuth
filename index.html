@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>The Horsley Abbots Murders</title>
+    <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111312">
+<link rel="apple-touch-icon" href="icon-192.png">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -263,6 +266,13 @@
 
     <script>
         function vib(pattern) { if (navigator.vibrate) navigator.vibrate(pattern); }
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('Service Worker registered'))
+            .catch(err => console.log('Service Worker failed', err));
+    });
+}
 
         const AudioSys = {
             ctx: null, drone: null, gain: null, heartbeatInterval: null,
