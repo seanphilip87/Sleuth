@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>The Horsley Abbots Murders</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,19 +11,32 @@
 
     <style>
         :root {
-            --bg-color: #111312; --card-bg: #1c211e;
-            --text-main: #c4c9c5; --text-muted: #79857d;
-            --accent-gold: #ffd257; --danger-red: #ff5c5c; --success-green: #7fd966;
-            --font-ui: 'Inter', sans-serif; --font-story: 'Cormorant Garamond', serif;
+            --bg-color: #111312; 
+            --card-bg: #1c211e;
+            --text-main: #c4c9c5; 
+            --text-muted: #79857d;
+            --accent-gold: #ffd257; 
+            --danger-red: #ff5c5c; 
+            --success-green: #7fd966;
+            --font-ui: 'Inter', sans-serif; 
+            --font-story: 'Cormorant Garamond', serif;
+            --paranoia-level: 0;
         }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
 
         body {
             background-color: var(--bg-color); 
             background-image: radial-gradient(circle at 50% 0%, #1c241e 0%, #111312 80%);
-            color: var(--text-main); font-family: var(--font-story);
-            margin: 0; padding: 0; display: flex; flex-direction: column; 
+            color: var(--text-main); 
+            font-family: var(--font-story);
+            margin: 0; padding: 0; 
+            display: flex; flex-direction: column; 
             height: 100vh; height: 100dvh; width: 100vw;
             overflow: hidden; touch-action: none; user-select: none;
+            -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
             position: relative;
         }
 
@@ -33,130 +46,162 @@
             pointer-events: none; z-index: 1; 
         }
 
-        body.jeopardy-active { animation: pulse-red 1.2s infinite ease-in-out; }
-        @keyframes pulse-red {
-            0%, 100% { box-shadow: inset 0 0 30px rgba(255, 92, 92, 0.15); }
-            50% { box-shadow: inset 0 0 100px rgba(255, 92, 92, 0.4); }
+        body::after {
+            content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            box-shadow: inset 0 0 min(150px, 20vw) rgba(0,0,0, var(--paranoia-level));
+            pointer-events: none; z-index: 999; transition: box-shadow 0.5s ease;
         }
+
+        #rain-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 2; opacity: 0.5;
+        }
+
+        /* Standard Hunted Animation */
+        @keyframes heartbeat {
+            0%, 100% { box-shadow: inset 0 0 50px rgba(255, 92, 92, 0.1); transform: scale(1); }
+            15% { box-shadow: inset 0 0 120px rgba(255, 92, 92, 0.4); transform: scale(1.01); }
+            30% { box-shadow: inset 0 0 50px rgba(255, 92, 92, 0.1); transform: scale(1); }
+            45% { box-shadow: inset 0 0 120px rgba(255, 92, 92, 0.4); transform: scale(1.01); }
+        }
+        body.hunted { animation: heartbeat 0.85s infinite; }
+
+        /* The 'Weapon Pickup' Panic State */
+        body.jeopardy-active { animation: jeopardy-shake 0.3s infinite; }
+        @keyframes jeopardy-shake {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(-1px, 1px); }
+            50% { transform: translate(1px, -1px); }
+            75% { transform: translate(-1px, -1px); }
+        }
+        body.jeopardy-active::after {
+            box-shadow: inset 0 0 40vw rgba(200, 0, 0, 0.7) !important;
+            animation: doom-pulse 1s infinite alternate;
+        }
+        @keyframes doom-pulse {
+            from { box-shadow: inset 0 0 30vw rgba(200, 0, 0, 0.5); }
+            to { box-shadow: inset 0 0 60vw rgba(255, 0, 0, 0.85); }
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        body.shake #card-container { animation: shake 0.4s; }
 
         .fullscreen-overlay {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
-            background: rgba(17, 19, 18, 0.95); 
-            z-index: 1000; display: flex; flex-direction: column; 
-            padding: 20px; box-sizing: border-box;
-            overflow-y: auto; overflow-x: hidden;
+            background: rgba(17, 19, 18, 0.95); z-index: 1000; 
+            display: flex; flex-direction: column; 
+            padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)) 20px;
+            box-sizing: border-box; overflow-y: auto; overflow-x: hidden;
             align-items: center; justify-content: flex-start;
+            transition: opacity 0.4s ease;
         }
         .hidden { display: none !important; opacity: 0; pointer-events: none; }
 
         .overlay-card {
-            background: linear-gradient(145deg, rgba(31, 37, 33, 0.95), rgba(24, 29, 26, 0.95));
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 4px; padding: 25px; box-shadow: 0 25px 50px rgba(0,0,0,0.8);
+            background: linear-gradient(145deg, rgba(31, 37, 33, 0.98), rgba(24, 29, 26, 0.98));
+            border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; 
+            padding: 30px 25px; box-shadow: 0 25px 50px rgba(0,0,0,0.8);
             width: 100%; max-width: 500px; margin: auto; box-sizing: border-box;
         }
 
-        .menu-title { font-size: 2.4em; font-weight: 800; color: var(--accent-gold); text-align: center; margin-bottom: 5px; font-family: var(--font-story); text-transform: uppercase; letter-spacing: 2px; line-height: 1.1;}
-        .menu-subtitle { text-align: center; color: var(--text-muted); font-size: 0.85em; margin-bottom: 25px; letter-spacing: 2px; text-transform: uppercase;}
-        
-        .novel-text { font-family: var(--font-story); font-size: 1.15em; line-height: 1.6; color: #e0e5e1; margin-bottom: 10px;}
+        .menu-title { font-size: clamp(2em, 8vw, 2.8em); font-weight: 800; color: var(--accent-gold); text-align: center; margin-bottom: 5px; font-family: var(--font-story); text-transform: uppercase; letter-spacing: 2px; line-height: 1.1;}
+        .menu-subtitle { text-align: center; color: var(--text-muted); font-size: 0.85em; margin-bottom: 25px; letter-spacing: 2px; text-transform: uppercase; font-family: var(--font-ui);}
+        .novel-text { font-size: clamp(1.1em, 4vw, 1.25em); line-height: 1.6; color: #e0e5e1; margin-bottom: 10px;}
         .novel-text p { margin-top: 0; margin-bottom: 15px; }
-        .suspect-list { font-family: var(--font-ui); font-size: 0.85em; margin-bottom: 20px; padding-left: 20px; color: var(--text-muted); }
-        .suspect-list li { margin-bottom: 8px; line-height: 1.4;}
-        .suspect-list strong { color: var(--accent-gold); }
 
-        .primary-btn { background: var(--accent-gold); color: #111; font-size: 1em; font-weight: 800; padding: 16px; border: none; border-radius: 4px; cursor: pointer; text-transform: uppercase; transition: transform 0.1s; width: 100%; box-sizing: border-box; margin-top: 15px;}
-        .primary-btn:active { transform: scale(0.96); }
+        .primary-btn { background: var(--accent-gold); color: #111; font-size: 1em; font-weight: 800; padding: 16px; border: none; border-radius: 6px; cursor: pointer; text-transform: uppercase; transition: transform 0.1s; width: 100%; min-height: 48px; box-sizing: border-box; margin-top: 15px; letter-spacing: 1px;}
+        .primary-btn:active { transform: scale(0.97); }
 
         .tut-block { margin-bottom: 12px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 4px; border-left: 4px solid var(--accent-gold);}
         .tut-block h3 { color: #e0e5e1; margin: 0 0 5px 0; font-size: 0.95em; text-transform: uppercase; letter-spacing: 1px;}
         .tut-block p { color: var(--text-muted); margin: 0; font-size: 0.95em; line-height: 1.5; font-family: var(--font-story);}
+        .diff-container { display: flex; flex-direction: column; gap: 10px; margin-top: auto; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto;}
 
-        #end-title { font-size: 2.5em; font-weight: 800; text-align: center; margin-bottom: 10px; text-transform: uppercase; font-family: var(--font-story); line-height: 1.1; color: var(--accent-gold); }
+        #end-title { font-size: clamp(2em, 8vw, 2.5em); font-weight: 800; text-align: center; margin-bottom: 10px; text-transform: uppercase; line-height: 1.1; color: var(--accent-gold); }
         #end-subtitle { text-align: center; color: var(--text-muted); font-size: 0.8em; margin-bottom: 20px; letter-spacing: 2px; text-transform: uppercase; font-family: var(--font-ui); }
-        #end-desc { font-family: var(--font-story); font-size: 1.1em; line-height: 1.5; color: var(--text-muted); margin-bottom: 20px; text-align: justify;}
-        
+        #end-desc { font-size: 1.1em; line-height: 1.5; color: var(--text-muted); margin-bottom: 20px; text-align: justify;}
         .score-box { background: rgba(0,0,0,0.4); border: 1px solid var(--accent-gold); padding: 15px; border-radius: 4px; text-align: center; margin-bottom: 20px; }
         .score-box h2 { color: var(--accent-gold); font-size: 2.5em; margin: 0; font-family: var(--font-story);}
         .score-box p { margin: 5px 0 0 0; color: var(--text-main); font-size: 1em; text-transform: uppercase; letter-spacing: 1px; font-family: var(--font-ui); font-weight: bold;}
-        
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: var(--font-ui); font-size: 0.75em; }
-        .stat-item { background: rgba(255,255,255,0.05); padding: 8px; border-radius: 4px; display: flex; justify-content: space-between;}
+        .stat-item { background: rgba(255,255,255,0.05); padding: 10px 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;}
         .stat-val { color: var(--text-main); font-weight: bold; }
 
-        /* --- GAME UI --- */
-        #top-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px 5px 20px; font-family: var(--font-ui); font-size: 0.7em; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; z-index: 100;}
+        #top-bar { display: flex; justify-content: space-between; align-items: center; padding: max(15px, env(safe-area-inset-top)) 20px 10px 20px; font-family: var(--font-ui); font-size: clamp(0.65em, 2vw, 0.75em); font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; z-index: 100;}
         #top-bar span.active { color: var(--accent-gold); text-shadow: 0 0 10px rgba(255, 210, 87, 0.4); }
-        .sandwich-btn { background: rgba(255, 210, 87, 0.15); border: 1px solid var(--accent-gold); padding: 4px 10px; border-radius: 4px; color: var(--accent-gold); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s; z-index: 100;}
+        .sandwich-btn { background: rgba(255, 210, 87, 0.15); border: 1px solid var(--accent-gold); padding: 8px 12px; border-radius: 6px; color: var(--accent-gold); cursor: pointer; display: flex; align-items: center; gap: 5px; min-height: 38px; transition: all 0.2s; z-index: 100;}
         .sandwich-btn:active { transform: scale(0.9); }
         .sandwich-btn.disabled { opacity: 0.3; pointer-events: none; border-color: var(--text-muted); color: var(--text-muted); }
         
-        #mini-map {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
-            padding: 10px 20px 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);
-            max-width: 400px; margin: 0 auto; width: 100%; box-sizing: border-box; flex: 0 0 auto;
-            position: relative; z-index: 10;
-        }
-        .map-room {
-            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 4px; padding: 4px 2px;
-            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-            min-height: 55px; transition: all 0.3s; position: relative;
-        }
+        #mini-map { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px 20px 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); max-width: 450px; margin: 0 auto; width: 100%; box-sizing: border-box; flex: 0 0 auto; position: relative; z-index: 10; }
+        .map-room { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 6px 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 60px; transition: all 0.3s; position: relative; }
         .map-room.active { background: rgba(255, 210, 87, 0.1); border-color: var(--accent-gold); box-shadow: 0 0 10px rgba(255, 210, 87, 0.15); }
-        .rm-name { font-size: 0.55em; color: var(--text-muted); font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 0.5px; width: 100%; text-align: center; white-space: normal; line-height: 1.1; margin-bottom: 2px; flex-grow: 1; display: flex; align-items: center; justify-content: center;}
+        .rm-name { font-size: clamp(0.5em, 2.5vw, 0.6em); color: var(--text-muted); font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 0.5px; width: 100%; text-align: center; white-space: normal; line-height: 1.2; margin-bottom: 4px; flex-grow: 1; display: flex; align-items: center; justify-content: center;}
         .map-room.active .rm-name { color: var(--accent-gold); font-weight: 800; }
-        
-        .map-dots { display: flex; gap: 3px; margin-top: auto; padding-bottom: 2px; flex-wrap: wrap; justify-content: center; width: 100%; padding: 0 4px; box-sizing: border-box;}
+        .map-dots { display: flex; gap: 4px; margin-top: auto; padding-bottom: 2px; flex-wrap: wrap; justify-content: center; width: 100%; box-sizing: border-box;}
         .map-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.8);}
         .map-dot.player { background: var(--accent-gold); box-shadow: 0 0 6px var(--accent-gold); width: 8px; height: 8px; border: 1px solid #111;}
 
-        /* --- CARDS & SWIPE UI --- */
-        #card-container { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; perspective: 1000px; padding: 20px;}
+        #card-container { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; perspective: 1000px; padding: 20px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
         
-        .hint-label { 
-            position: absolute; font-family: var(--font-ui); font-size: 0.75em; font-weight: 800; 
-            text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); 
-            z-index: 50; cursor: pointer; transition: all 0.2s;
-            display: flex; align-items: center; justify-content: center; text-align: center;
-        }
+        .hint-label { position: absolute; font-family: var(--font-ui); font-size: 0.75em; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); z-index: 50; transition: all 0.2s; display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer; }
         .hint-label:active { transform: scale(0.95); color: var(--text-main); }
-        .hint-label.highlight { color: var(--accent-gold); text-shadow: 0 0 10px var(--accent-gold); transform: scale(1.05);}
-        
-        #hint-up { top: 15px; left: 50%; transform: translateX(-50%); }
-        #hint-down { bottom: 15px; left: 50%; transform: translateX(-50%); }
-        #hint-left { left: 5px; top: 50%; writing-mode: vertical-rl; text-orientation: mixed; transform: translateY(-50%) rotate(180deg); height: auto; }
-        #hint-left.highlight { transform: translateY(-50%) rotate(180deg) scale(1.05); }
-        #hint-right { right: 5px; top: 50%; writing-mode: vertical-rl; text-orientation: mixed; transform: translateY(-50%); height: auto; }
-        #hint-right.highlight { transform: translateY(-50%) scale(1.05); }
+        #hint-up { top: 20px; left: 50%; transform: translateX(-50%); }
+        #hint-down { bottom: max(20px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); }
+        #hint-left { left: 10px; top: 50%; writing-mode: vertical-rl; text-orientation: mixed; transform: translateY(-50%) rotate(180deg); height: auto; }
+        #hint-right { right: 10px; top: 50%; writing-mode: vertical-rl; text-orientation: mixed; transform: translateY(-50%); height: auto; }
 
         .swipe-card {
-            position: absolute; width: 100%; max-width: 320px; height: 60vh; max-height: 480px;
+            position: absolute; width: 100%; max-width: 340px; height: 62vh; max-height: 520px;
             background: linear-gradient(145deg, #1f2521, #181d1a);
-            border: 1px solid #2a332d; border-radius: 2px;
+            border: 1px solid #2a332d; border-radius: 8px;
             box-shadow: 0 25px 50px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.03);
-            display: flex; flex-direction: column; padding: 25px; box-sizing: border-box;
+            display: flex; flex-direction: column; padding: 25px 20px; box-sizing: border-box;
             cursor: grab; transform-origin: 50% 100%; will-change: transform; z-index: 10;
         }
         .swipe-card:active { cursor: grabbing; }
-
-        .card-header { font-family: var(--font-ui); font-size: 0.75em; text-transform: uppercase; letter-spacing: 2px; color: var(--accent-gold); margin-bottom: 10px; font-weight: 800;}
-        .card-title { font-size: 2.2em; font-weight: 700; color: var(--text-main); margin-bottom: 15px; line-height: 1.1; }
-        .card-body { font-size: 1.15em; line-height: 1.5; color: var(--text-main); flex-grow: 1; overflow-y: auto; padding-right: 5px;}
+        .card-behind { position: absolute; width: 100%; max-width: 340px; height: 62vh; max-height: 520px; background: rgba(28, 33, 30, 0.5); border: 1px solid rgba(255, 255, 255, 0.02); border-radius: 8px; transform: scale(0.95) translateY(20px); z-index: 5;}
+        
+        .card-header { font-family: var(--font-ui); font-size: 0.75em; text-transform: uppercase; letter-spacing: 2px; color: var(--accent-gold); margin-bottom: 8px; font-weight: 800;}
+        .card-title { font-size: clamp(1.8em, 7vw, 2.2em); font-weight: 700; color: var(--text-main); margin-bottom: 15px; line-height: 1.1; }
+        .card-body { font-size: 1.1em; line-height: 1.5; color: var(--text-main); flex-grow: 1; overflow-y: auto; padding-right: 5px;}
         .card-body p { margin-top: 0; margin-bottom: 15px; }
-        .dialogue { font-style: italic; color: #fff; border-left: 2px solid var(--accent-gold); padding-left: 15px; margin: 15px 0; background: rgba(0,0,0,0.25); padding: 10px 15px;}
+        .dialogue { font-style: italic; color: #fff; border-left: 3px solid var(--accent-gold); margin: 15px 0; background: rgba(0,0,0,0.25); padding: 12px 15px; border-radius: 0 4px 4px 0;}
         .desc-text { color: var(--text-muted); font-style: italic; font-size: 0.9em; margin-bottom: 15px;}
-        
-        .entity-list { margin-top: 15px; font-family: var(--font-ui); font-size: 0.8em; }
-        .entity-item { background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 2px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.02);}
-        
-        .card-behind { position: absolute; width: 100%; max-width: 320px; height: 60vh; max-height: 480px; background: rgba(28, 33, 30, 0.5); border: 1px solid rgba(255, 255, 255, 0.02); border-radius: 2px; transform: scale(0.95) translateY(20px); z-index: 5;}
-        
+        .entity-list { margin-top: 15px; font-family: var(--font-ui); font-size: 0.85em; }
+        .entity-item { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 4px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.03);}
         .danger-text { color: var(--danger-red); font-weight: 700; text-shadow: 0 0 5px rgba(255,92,92,0.3); }
         .sys-text { color: var(--text-muted); font-family: var(--font-ui); font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px;}
+
+        .swipe-stamp {
+            position: absolute; padding: 8px 12px; border: 3px solid var(--text-main);
+            color: var(--text-main); font-family: var(--font-ui); font-size: 1.2em;
+            font-weight: 800; text-transform: uppercase; border-radius: 6px;
+            opacity: 0; z-index: 100; pointer-events: none; letter-spacing: 1px;
+            background: rgba(17,19,18,0.9); box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            text-align: center; line-height: 1.1; max-width: 80%;
+        }
+        .stamp-right { top: 30px; left: 20px; border-color: var(--success-green); color: var(--success-green); transform: rotate(-10deg); }
+        .stamp-left { top: 30px; right: 20px; border-color: var(--danger-red); color: var(--danger-red); transform: rotate(10deg); }
+        .stamp-up { bottom: 30px; left: 50%; transform: translateX(-50%); border-color: var(--accent-gold); color: var(--accent-gold); }
+        .stamp-down { top: 30px; left: 50%; transform: translateX(-50%); border-color: #888; color: #ccc; }
     </style>
 </head>
 <body>
+
+    <canvas id="rain-canvas"></canvas>
 
     <div id="prologue-screen" class="fullscreen-overlay hidden">
         <div class="overlay-card">
@@ -171,15 +216,15 @@
             <div class="menu-subtitle">A Detective's Work</div>
             <div class="tut-block">
                 <h3>1. Geographical Friction</h3>
-                <p>Two random locations are completely inaccessible (flooded, pitch black, or locked). You must blindly find the utility items scattered in other rooms. You won't know a room is blocked until you try to enter.</p>
+                <p>Two random locations are inaccessible. Find utility items (Boots, Lantern, Key) to enter them.</p>
             </div>
             <div class="tut-block">
-                <h3>2. The Interrogation & Patience</h3>
-                <p>Locals have limits. Asking standard questions raises their chance of walking away (by the 3rd question, they might snap). Insulting them gets real answers, but they will permanently clam up after <b>two insults</b>. Be warned: insulting someone in a crowded room disgusts the witnesses, rapidly draining their patience too.</p>
+                <h3>2. The Interrogation Web</h3>
+                <p>Every suspect holds 5 facts. A polite <b>Grunt</b> reveals up to 2 before they get annoyed. A <b>Deep Insult</b> reveals up to 2 more, but spikes Hostility. <b>Warning: Insulting the true Killer will massively spike their paranoia.</b> Eating your <b>Sandwich</b> lowers Hostility.</p>
             </div>
             <div class="tut-block">
                 <h3>3. The Grand Assembly</h3>
-                <p>When you have the weapon, return to the Crime Scene to accuse. You must correctly link the <b>Killer</b> AND their specific <b>Motive</b>.</p>
+                <p>When you pocket the weapon, return to the Crime Scene. The innocents perfectly corroborate each other's alibis. The killer's alibi will be a lie. Accuse the killer and their true motive.</p>
             </div>
             <div class="diff-container">
                 <button id="btn-easy" class="primary-btn diff-btn" style="background:var(--success-green); color:#111;">EASY (Tolerant Idiots)</button>
@@ -199,8 +244,8 @@
     </div>
 
     <div id="top-bar">
-        <div style="flex: 1; display:flex; gap:5px; align-items:center;" id="inv-icons"></div> 
-        <div style="flex: 1; text-align: center;">Hostility: <span id="suspicion-text" class="active" style="color:var(--success-green);">CORDIAL</span></div>
+        <div style="flex: 1; display:flex; gap:8px; align-items:center;" id="inv-icons"></div> 
+        <div style="flex: 1; text-align: center;">Hostility:<br><span id="suspicion-text" class="active" style="color:var(--success-green);">CORDIAL</span></div>
         <div style="flex: 1; display: flex; justify-content: flex-end;">
             <div id="btn-sandwich" class="sandwich-btn" onclick="eatSandwich()">🥪 <span id="sandwich-count">3</span></div>
         </div>
@@ -209,41 +254,105 @@
     <div id="mini-map"></div>
 
     <div id="card-container">
-        <div id="hint-up" class="hint-label">▲ Up</div>
-        <div id="hint-down" class="hint-label">▼ Down</div>
-        <div id="hint-left" class="hint-label">◀ Left</div>
-        <div id="hint-right" class="hint-label">Right ▶</div>
+        <div id="hint-up" class="hint-label"></div>
+        <div id="hint-down" class="hint-label"></div>
+        <div id="hint-left" class="hint-label"></div>
+        <div id="hint-right" class="hint-label"></div>
         <div class="card-behind"></div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('btn-to-tutorial').addEventListener('click', () => {
-                document.getElementById('prologue-screen').classList.add('hidden');
-                document.getElementById('tutorial-screen').classList.remove('hidden');
-            });
-            document.getElementById('btn-easy').addEventListener('click', () => startGame('easy'));
-            document.getElementById('btn-normal').addEventListener('click', () => startGame('normal'));
-            document.getElementById('btn-hard').addEventListener('click', () => startGame('hard'));
-            document.getElementById('btn-restart').addEventListener('click', () => {
-                document.getElementById('end-screen').classList.add('hidden');
-                initWorld(); 
-            });
+        function vib(pattern) { if (navigator.vibrate) navigator.vibrate(pattern); }
 
-            initWorld(); 
-        });
+        const AudioSys = {
+            ctx: null, drone: null, gain: null, heartbeatInterval: null,
+            init() {
+                if (this.ctx) return;
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.startDrone();
+            },
+            startDrone() {
+                if(!this.ctx) return;
+                this.drone = this.ctx.createOscillator();
+                this.drone.type = 'triangle';
+                this.drone.frequency.setValueAtTime(45, this.ctx.currentTime);
+                this.gain = this.ctx.createGain();
+                this.gain.gain.value = 0.05; 
+                this.drone.connect(this.gain);
+                this.gain.connect(this.ctx.destination);
+                this.drone.start();
+            },
+            playSmack() {
+                if(!this.ctx) return;
+                let osc = this.ctx.createOscillator(); let g = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.15);
+                g.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(g); g.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.15);
+            },
+            playSnap() {
+                if(!this.ctx) return;
+                let osc = this.ctx.createOscillator(); let g = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(80, this.ctx.currentTime + 0.3);
+                g.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(g); g.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.3);
+            },
+            setHeartbeat(active) {
+                if (active && !this.heartbeatInterval) {
+                    document.body.classList.add('hunted');
+                    this.heartbeatInterval = setInterval(() => { vib([100, 100, 100, 500]); }, 850);
+                } else if (!active && this.heartbeatInterval) {
+                    document.body.classList.remove('hunted');
+                    clearInterval(this.heartbeatInterval); this.heartbeatInterval = null;
+                }
+            }
+        };
+
+        const Rain = {
+            canvas: null, ctx: null, drops: [], active: false,
+            init() {
+                this.canvas = document.getElementById('rain-canvas'); this.ctx = this.canvas.getContext('2d');
+                this.resize(); window.addEventListener('resize', () => this.resize());
+                for(let i=0; i<120; i++) this.drops.push(this.createDrop());
+                this.active = true; this.loop();
+            },
+            resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; },
+            createDrop() { return { x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, s: Math.random()*15+10, l: Math.random()*25+10 }; },
+            loop() {
+                if(!this.active) return;
+                this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
+                this.ctx.strokeStyle = 'rgba(150, 160, 150, 0.2)'; 
+                this.ctx.lineWidth = 1.5;
+                this.ctx.beginPath();
+                this.drops.forEach(d => {
+                    this.ctx.moveTo(d.x, d.y); this.ctx.lineTo(d.x - d.l*0.2, d.y + d.l);
+                    d.x -= d.s*0.2; d.y += d.s;
+                    if(d.y > this.canvas.height) { d.x = Math.random()*this.canvas.width; d.y = -d.l; }
+                });
+                this.ctx.stroke();
+                requestAnimationFrame(() => this.loop());
+            }
+        };
 
         const maleNames = ["Nigel", "Ian", "Keith", "Colin", "Gary", "Trevor", "Clive", "Barry", "Gordon"];
         const femaleNames = ["Maureen", "Brenda", "Beryl", "Deirdre", "Pamela", "Susan", "Sharon", "Pauline", "Janet"];
         const surnames = ["Gristle", "Faffingdale", "Goblet", "Plop", "Trotter", "Snitch", "Slurry", "Bogtrotter", "Scab", "Wattle"];
+        const suspectColors = ['#8a3324', '#6b8e23', '#483d8b', '#bdaa55', '#778899', '#2f4f4f'];
 
         const suspectArchetypes = [
-            { role: "The Barmaid", gender: "female", desc: "A matronly woman with faded blue tattoos.", clam: "Shut your cake-hole, Hinchfliffe. I've got kegs to change.", lines: { deny1: "Listen here, mush. I didn't do nuffink. ", deny2: "Are your ears painted on? I told you: ", probeMiss: "You're cruisin' for a bruisin', detective.", gossip: "I shouldn't say, but keep a peeper on " } },
-            { role: "The Vicar", gender: "male", desc: "Clutching a Bible, sweating profusely.", clam: "The Lord is my shepherd! Leave me be!", lines: { deny1: "I walk in the light! I was nowhere near the tragedy. ", deny2: "Please, you're making me perspire! As I said: ", probeMiss: "You speak with the serpent's tongue!", gossip: "It grieves me to bear false witness, but I did see " } },
-            { role: "The Chef", gender: "male", desc: "Wearing a pristine white jacket.", clam: "I have three Michelin stars! I will not be spoken to like this!", lines: { deny1: "I am a culinary god. I do not lie. ", deny2: "Get out of my kitchen! I told you: ", probeMiss: "I will julienne your miserable little fingers!", gossip: "If you must know, the true rat in this village is " } },
-            { role: "The Butcher", gender: "male", desc: "Producing wet, guttural vibrations. Hands the size of hams.", clam: "[Angry pig noises] Get out of my light, corpse.", lines: { deny1: "[Wet grunt] Meat's meat. Ain't killed no human. ", deny2: "[Slaps imaginary cleaver] Said it once: ", probeMiss: "Keep talkin' and you'll end up in the tray.", gossip: "Don't care much, but saw " } },
-            { role: "The Mini-Mart Owner", gender: "female", desc: "Wearing oversized sunglasses, walking on eggshells.", clam: "My ankles are insured for millions! Stop stressing me!", lines: { deny1: "Careful with the stock! I am innocent. ", deny2: "You are stressing my calves! As I said: ", probeMiss: "You are a vile, unglamorous man!", gossip: "Between you and me, I spotted " } },
-            { role: "The Busybody", gender: "female", desc: "Thin as a rake, wearing a rattling necklace of human teeth.", clam: "I'm adding your molars to my chain, Hinchfliffe.", lines: { deny1: "Wipe your shoes! The WI does not harbour murderers. ", deny2: "I will write a strongly worded letter! I told you: ", probeMiss: "You are common! Common and wretched!", gossip: "I see everything. Everything. Keep an eye on " } }
+            { role: "The Barmaid", gender: "female", desc: "A matronly woman with faded blue tattoos." },
+            { role: "The Vicar", gender: "male", desc: "Clutching a Bible, sweating profusely." },
+            { role: "The Chef", gender: "male", desc: "Wearing a pristine white jacket." },
+            { role: "The Butcher", gender: "male", desc: "Producing wet, guttural vibrations. Hands the size of hams." },
+            { role: "The Mini-Mart Owner", gender: "female", desc: "Wearing oversized sunglasses, walking on eggshells." },
+            { role: "The Busybody", gender: "female", desc: "Thin as a rake, wearing a rattling necklace of human teeth." }
         ];
 
         const motives = [
@@ -295,7 +404,7 @@
             turns: 0, currentContext: '', tempPayload: null, turnEvents: [],
             hasWeapon: false, hasMagnifier: false, inventory: [], murderSceneDepth: 3,
             murderRoomId: '', crimeSceneFound: false, gameOver: false, triggerKillerCorner: false,
-            suspicion: 0, maxSuspicion: 25, freeProbeChance: 0.15, isHunted: false,
+            suspicion: 0, maxSuspicion: 25, freeProbeChance: 0.15, isHunted: false, weaponTensionInterval: null,
             sandwichBites: 3, frictions: {},
             roomExamines: {}, playerRoomId: '5', suspects: [], items: [], swipeActions: {},
             stats: { moves: 0, searches: 0, probes: 0, insults: 0, wrongAccusations: 0, sandwichEaten: 0, pplSpoken: new Set(), escapes: 0 },
@@ -310,33 +419,51 @@
             return Math.abs(x1 - x2) + Math.abs(y1 - y2);
         }
 
+        document.addEventListener('DOMContentLoaded', () => {
+            Rain.init();
+            
+            document.getElementById('btn-to-tutorial').addEventListener('click', () => {
+                document.getElementById('prologue-screen').classList.add('hidden');
+                document.getElementById('tutorial-screen').classList.remove('hidden');
+            });
+            document.getElementById('btn-easy').addEventListener('click', () => startGame('easy'));
+            document.getElementById('btn-normal').addEventListener('click', () => startGame('normal'));
+            document.getElementById('btn-hard').addEventListener('click', () => startGame('hard'));
+            document.getElementById('btn-restart').addEventListener('click', () => {
+                document.getElementById('end-screen').classList.add('hidden');
+                initWorld(); 
+            });
+
+            initWorld(); 
+        });
+
         function initWorld() {
+            if (state.weaponTensionInterval) clearInterval(state.weaponTensionInterval);
+            state.weaponTensionInterval = null;
+
             state.turns = 0; state.suspicion = 0; state.hasWeapon = false; state.hasMagnifier = false; state.inventory = [];
             state.gameOver = false; state.crimeSceneFound = false; state.turnEvents = []; state.triggerKillerCorner = false;
             state.isHunted = false; state.sandwichBites = 3; state.murderSceneDepth = Math.floor(Math.random() * 3) + 1; 
             state.stats = { moves: 0, searches: 0, probes: 0, insults: 0, wrongAccusations: 0, sandwichEaten: 0, pplSpoken: new Set(), escapes: 0 };
             state.tempAccused = null; state.frictions = {};
+            AudioSys.setHeartbeat(false); document.body.classList.remove('shake'); document.body.classList.remove('jeopardy-active');
+            document.body.style.setProperty('--paranoia-level', 0);
             
             theme.rooms.forEach(r => state.roomExamines[r.id] = 0);
-            state.playerRoomId = '5'; // Start at Mini-Mart
+            state.playerRoomId = '5'; 
 
             let availableRooms = shuffle(theme.rooms.map(r => r.id).filter(id => id !== '5'));
             state.murderRoomId = availableRooms[0];
             let weaponRoomId = availableRooms[1];
             let itemRooms = availableRooms.slice(2, 6);
 
-            // Establish Frictions
             let selectedFrictions = shuffle(frictionTypes).slice(0, 2);
             let blockedRoomsIds = [];
-            
             if (Math.random() < 0.8) blockedRoomsIds.push(state.murderRoomId);
             else blockedRoomsIds.push(itemRooms[2]);
 
             if (Math.random() < 0.8 && !blockedRoomsIds.includes(weaponRoomId)) blockedRoomsIds.push(weaponRoomId);
-            else {
-                let safeBlocks = availableRooms.filter(id => !blockedRoomsIds.includes(id));
-                blockedRoomsIds.push(safeBlocks[0]);
-            }
+            else { let safeBlocks = availableRooms.filter(id => !blockedRoomsIds.includes(id)); blockedRoomsIds.push(safeBlocks[0]); }
 
             state.frictions[blockedRoomsIds[0]] = selectedFrictions[0];
             state.frictions[blockedRoomsIds[1]] = selectedFrictions[1];
@@ -359,43 +486,70 @@
             state.magnifierRoomId = safeItemRooms[2];
 
             let mNames = shuffle([...maleNames]); let fNames = shuffle([...femaleNames]); let sNamesLast = shuffle([...surnames]);
-            let sData = shuffle([...suspectArchetypes]).slice(0,6); let sMotives = shuffle(motives);
+            let sData = shuffle([...suspectArchetypes]).slice(0,6); let sMotives = shuffle(motives); let sCols = shuffle([...suspectColors]);
             let suspectRooms = shuffle([...theme.rooms.map(r=>r.id)]);
-
-            const getRoomName = (id) => theme.rooms.find(r => r.id === id).name;
 
             state.suspects = [];
             for(let i=0; i<6; i++) {
                 let isMale = sData[i].gender === 'male';
                 let fName = isMale ? mNames.pop() : fNames.pop();
                 state.suspects.push({
-                    name: `${fName} ${sNamesLast[i]}`, role: sData[i].role, desc: sData[i].desc, color: '#ffd257', clam: sData[i].clam, lines: sData[i].lines, 
+                    name: `${fName} ${sNamesLast[i]}`, role: sData[i].role, desc: sData[i].desc, color: sCols[i], 
                     sub: isMale ? 'he' : 'she', obj: isMale ? 'him' : 'her', pos: isMale ? 'his' : 'her',
-                    motive: sMotives[i], isMurderer: (i === 0), hasMet: false, clammed: false, 
-                    hasRevealedRealAlibi: false, hasRevealedMotive: false,
-                    gruntCount: 0, insultCount: 0, roomId: suspectRooms[i]
+                    motive: sMotives[i], isMurderer: (i === 0), hasMet: false, clammedNormal: false, clammed: false,
+                    roomId: suspectRooms[i]
                 });
             }
 
-            let fakeRoomBank = shuffle(theme.rooms.map(r=>r.id));
-            state.suspects[0].initialAlibi = `I was wandering alone around the ${getRoomName(fakeRoomBank[0])}.`;
-            state.suspects[0].realAlibi = `Alright, I was at the ${getRoomName(state.murderRoomId)}! But I just found the body!`;
-            state.suspects[0].isLying = true;
-
-            state.suspects.slice(1).forEach((s, idx) => {
-                let actualRoom = fakeRoomBank[(idx + 1) % fakeRoomBank.length];
-                if (Math.random() < 0.3) {
-                    let fakeRoom = fakeRoomBank[(idx + 4) % fakeRoomBank.length];
-                    s.initialAlibi = `I spent the entire evening at the ${getRoomName(fakeRoom)}.`;
-                    s.realAlibi = `I lied. I was actually hiding in the ${getRoomName(actualRoom)} doing something deeply embarrassing.`;
-                    s.isLying = true;
-                } else {
-                    s.initialAlibi = `I was at the ${getRoomName(actualRoom)} the whole time.`;
-                    s.realAlibi = s.initialAlibi;
-                    s.isLying = false;
-                }
-            });
+            let inns = state.suspects.filter(s => !s.isMurderer);
+            let m = state.suspects.find(s => s.isMurderer);
             
+            let availableRoomsForAlibi = shuffle(theme.rooms.map(r => r.name));
+            let r1 = availableRoomsForAlibi[0]; let r2 = availableRoomsForAlibi[1]; let r3 = availableRoomsForAlibi[2];
+
+            inns[0].myAlibi = `I was in the ${r1} the entire time with ${inns[1].name.split(' ')[0]}.`;
+            inns[1].myAlibi = `I was in the ${r1} the entire time with ${inns[0].name.split(' ')[0]}.`;
+
+            inns[2].myAlibi = `I was stuck in the ${r2} with ${inns[3].name.split(' ')[0]} and ${inns[4].name.split(' ')[0]}.`;
+            inns[3].myAlibi = `I was stuck in the ${r2} with ${inns[2].name.split(' ')[0]} and ${inns[4].name.split(' ')[0]}.`;
+            inns[4].myAlibi = `I was stuck in the ${r2} with ${inns[2].name.split(' ')[0]} and ${inns[3].name.split(' ')[0]}.`;
+
+            m.myAlibi = `I was nowhere near it! I was with ${inns[0].name.split(' ')[0]} in the ${r3}.`; 
+
+            const irrelevantStories = [
+                "was caught stealing from the collection plate",
+                "has a terrible rash they are trying to hide",
+                "was weeping uncontrollably in the toilets earlier",
+                "is heavily in debt to some nasty people in London",
+                "has been passing off cheap horsemeat as beef",
+                "wears a rather unconvincing toupee"
+            ];
+            let stories = shuffle([...irrelevantStories]);
+
+            state.suspects.forEach(s => {
+                let others = state.suspects.filter(o => o !== s);
+                
+                let gossipTarget = others[Math.floor(Math.random() * others.length)];
+                let gossipStr = `${gossipTarget.name.split(' ')[0]} ${stories.pop()}. Sad, really.`;
+
+                let motiveTarget = others[Math.floor(Math.random() * others.length)];
+                let motiveStr = `I know for a fact ${motiveTarget.name.split(' ')[0]} had a reason: ${motiveTarget.motive}`;
+
+                let alibiTarget = others[Math.floor(Math.random() * others.length)];
+                let alibiStr = `I heard ${alibiTarget.name.split(' ')[0]} claims: "${alibiTarget.myAlibi}"`;
+
+                s.infoPool = shuffle([
+                    { type: 'alibi', label: 'Their Alibi', text: s.myAlibi },
+                    { type: 'motive', label: 'Their Secret', text: `Fine, yes. ${s.motive} But I'm no killer.` },
+                    { type: 'gossip', label: 'Irrelevant Gossip', text: gossipStr },
+                    { type: 'known_motive', label: `${motiveTarget.name.split(' ')[0]}'s Motive`, text: motiveStr },
+                    { type: 'known_alibi', label: `${alibiTarget.name.split(' ')[0]}'s Alibi`, text: alibiStr }
+                ]);
+                s.revealedData = [];
+                s.normalReveals = 0;
+                s.deepReveals = 0;
+            });
+
             state.suspects = shuffle(state.suspects); 
             renderPrologue();
         }
@@ -405,7 +559,7 @@
                 <div class="menu-title">CHAPTER ONE</div>
                 <div class="menu-subtitle">A Damp Arrival in Horsley Abbots</div>
                 <div class="novel-text">
-                    <p>Stetson Hinchfliffe did not enter a room; he intruded upon it. Behind his ear sat his half-eaten cheddar and margarine sandwich.</p>
+                    <p>Stetson Hinchfliffe did not enter a room; he intruded upon it. Leaning heavily on a blackthorn cane that was three inches too short, forcing an aggressive stoop. Behind his ear sat his half-eaten cheddar and margarine sandwich.</p>
                     <p>He had been summoned to Horsley Abbots. The victim was Lord Reginald Blackwood. Stetson reviewed the coroner's brief: <strong class="danger-text">${state.causeOfDeath.desc}</strong></p>
                     <p>Every shadow in this village hides a secret. Every inhabitant is a liar. The environment itself is hostile.</p>
                     <p>Stetson took a bite of his sandwich. It was time to go to work.</p>
@@ -416,10 +570,11 @@
         }
 
         function startGame(diff) {
+            try { AudioSys.init(); } catch(e) { console.log('Audio init skipped'); }
             document.getElementById('tutorial-screen').classList.add('hidden');
-            if (diff === 'easy') { state.maxSuspicion = 45; state.freeProbeChance = 0.30; }
-            else if (diff === 'normal') { state.maxSuspicion = 30; state.freeProbeChance = 0.15; }
-            else { state.maxSuspicion = 20; state.freeProbeChance = 0.05; }
+            if (diff === 'easy') { state.maxSuspicion = 45; }
+            else if (diff === 'normal') { state.maxSuspicion = 30; }
+            else { state.maxSuspicion = 20; }
             
             document.getElementById('btn-sandwich').classList.remove('disabled');
             document.body.classList.remove('jeopardy-active');
@@ -431,6 +586,7 @@
             if (state.sandwichBites <= 0 || state.gameOver) return;
             state.sandwichBites--; state.stats.sandwichEaten++;
             state.suspicion = Math.max(0, state.suspicion - 15);
+            AudioSys.playSmack(); vib([50, 100, 50]);
             updateHUD();
             generateCard('result_card', { title: "A Repulsive Display", text: "Stetson produced his pocketed sandwich and took a wet, smacking bite. The sheer grotesque nature of his chewing left any locals in the vicinity in a state of stunned, nauseated silence. Hostility has plummeted." });
         }
@@ -449,18 +605,20 @@
             document.getElementById('inv-icons').innerHTML = iconsHtml;
 
             let ratio = state.suspicion / state.maxSuspicion;
+            document.body.style.setProperty('--paranoia-level', Math.min(0.8, ratio));
+
             let susEl = document.getElementById('suspicion-text');
-            if (ratio < 0.4) { susEl.innerText = "CORDIAL"; susEl.style.color = "var(--success-green)"; }
-            else if (ratio < 0.75) { susEl.innerText = "VEXED"; susEl.style.color = "var(--accent-gold)"; }
-            else if (ratio < 0.95) { susEl.innerText = "ENRAGED"; susEl.style.color = "orange"; }
-            else { susEl.innerText = "CRITICAL"; susEl.style.color = "var(--danger-red)"; }
+            if (ratio < 0.4) { susEl.innerText = "CORDIAL"; susEl.style.color = "var(--success-green)"; AudioSys.setHeartbeat(false); }
+            else if (ratio < 0.75) { susEl.innerText = "VEXED"; susEl.style.color = "var(--accent-gold)"; AudioSys.setHeartbeat(false); }
+            else if (ratio < 1.0 && !state.isHunted) { susEl.innerText = "ENRAGED"; susEl.style.color = "orange"; AudioSys.setHeartbeat(false); }
+            else { susEl.innerText = "CRITICAL"; susEl.style.color = "var(--danger-red)"; AudioSys.setHeartbeat(true); }
 
             const mapHtml = theme.rooms.map(r => {
                 let isHere = r.id === state.playerRoomId;
                 let roomSuspects = state.suspects.filter(s => s.roomId === r.id);
                 let dotsHtml = '';
                 if (isHere) dotsHtml += `<div class="map-dot player"></div>`;
-                roomSuspects.forEach(s => { dotsHtml += `<div class="map-dot" style="background:${s.clammed ? '#555' : s.color}"></div>`; });
+                roomSuspects.forEach(s => { dotsHtml += `<div class="map-dot" style="background:${s.clammed ? '#333' : s.color}"></div>`; });
                 return `<div class="map-room ${isHere ? 'active' : ''}"><span class="rm-name">${r.name}</span><div class="map-dots">${dotsHtml}</div></div>`;
             }).join('');
             document.getElementById('mini-map').innerHTML = mapHtml;
@@ -471,9 +629,17 @@
             const symbols = { up: '▲ ', down: '▼ ', left: '◀ ', right: ' ▶' };
             dirs.forEach(dir => {
                 const el = document.getElementById(`hint-${dir}`);
+                if (!el) return;
                 const actionData = state.swipeActions[dir];
-                if (actionData) { el.style.display = 'flex'; el.innerText = dir === 'right' ? actionData.text + symbols[dir] : symbols[dir] + actionData.text; el.onclick = () => triggerAction(actionData.action); } 
-                else { el.style.display = 'none'; el.onclick = null; }
+                if (actionData) { 
+                    el.style.display = 'flex'; 
+                    el.innerText = dir === 'right' ? actionData.text + symbols[dir] : symbols[dir] + actionData.text; 
+                    el.onclick = () => { vib(10); triggerAction(actionData.action); }; 
+                } else { 
+                    el.style.display = 'none'; 
+                    el.innerText = ''; 
+                    el.onclick = null; 
+                }
             });
         }
 
@@ -528,7 +694,7 @@
                 let killer = state.suspects.find(s => s.isMurderer);
                 html = `<div class="card-header danger-text">HUNTED!</div><div class="card-title">Ambushed!</div><div class="card-body">
                 <p>The damp air grew suddenly thick. The only exit was blocked.</p>
-                <p><span style="color:${killer.color}; font-weight:bold;">${killer.name}</span>, ${killer.role}, stepped out of the gloom, eyes burning with murderous intent.</p>
+                <p><span style="color:${killer.color}; font-weight:bold;">${killer.name}</span> stepped out of the gloom, eyes burning with murderous intent.</p>
                 <div class="dialogue">"I've had enough of you, Hinchfliffe. It ends here."</div>
                 <p class="danger-text">They lunge! You must evade or die!</p></div>`;
                 
@@ -549,7 +715,7 @@
                 if (room.id === state.murderRoomId && state.crimeSceneFound) html += `<p class="danger-text">A massive pool of blood stains the ground here. The true Scene of the Crime.</p>`;
                 
                 html += `<div class="entity-list">`;
-                if (roomSuspects.length > 0) roomSuspects.forEach(s => html += `<div class="entity-item"><span style="color:${s.color}; font-weight:bold;">${s.name.split(' ')[0]}</span> <span>${s.role}</span></div>`);
+                if (roomSuspects.length > 0) roomSuspects.forEach(s => html += `<div class="entity-item"><span style="color:${s.color}; font-weight:bold;">${s.name.split(' ')[0]}</span> <span style="text-align:right;">${s.role}</span></div>`);
                 else html += `<div class="entity-item" style="color:var(--text-muted); justify-content:center;">Place is dead.</div>`;
                 if (roomItems.length > 0) roomItems.forEach(i => html += `<div class="entity-item"><span style="color:#fff;">${i.name}</span> <span>Item</span></div>`);
                 html += `</div></div>`;
@@ -647,6 +813,9 @@
                 
                 if (s.clammed) {
                     state.swipeActions.down = { text: "Limp Away", action: () => generateCard('room_idle') };
+                } else if (s.clammedNormal) {
+                    state.swipeActions.right = { text: "Insult Deeply", action: () => doProbe(s, true) };
+                    state.swipeActions.down = { text: "Limp Away", action: () => generateCard('room_idle') };
                 } else {
                     state.swipeActions.left = { text: "Grunt Inquiry", action: () => doProbe(s, false) };
                     state.swipeActions.right = { text: "Insult Deeply", action: () => doProbe(s, true) };
@@ -657,9 +826,32 @@
                 let idx = payload; let s = state.suspects[idx];
                 let nextIdx = (idx + 1) % state.suspects.length; let prevIdx = (idx - 1 + state.suspects.length) % state.suspects.length;
 
-                html = `<div class="card-header danger-text">GRAND ASSEMBLY (1/2)</div><div class="card-title">${s.name}</div><div class="card-body"><p class="desc-text">${s.role}</p><p>Is this the killer? Select carefully.</p></div>`;
+                let notesHtml = `<div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:4px; border-left:3px solid ${s.color}; margin-bottom:15px; font-size:0.85em;">
+                    <div class="sys-text" style="color:var(--accent-gold); margin-bottom:8px;">Stetson's Case File</div>
+                    <ul style="padding-left:15px; margin:0; color:var(--text-main); line-height:1.4; font-family:var(--font-ui);">`;
                 
-                state.swipeActions.up = { text: "SELECT SUSPECT", action: () => { state.tempAccused = s; generateCard('accuse_motive', 0); } };
+                if (s.revealedData.length === 0) {
+                    notesHtml += `<li><span class="danger-text">No data extracted.</span> Stetson knows absolutely nothing.</li>`;
+                } else {
+                    s.revealedData.forEach(d => {
+                        notesHtml += `<li style="margin-bottom:6px;"><strong style="color:var(--accent-gold);">${d.label}:</strong> ${d.text}</li>`;
+                    });
+                }
+
+                if (s.clammed) notesHtml += `<li style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;"><span class="danger-text">Status:</span> Refusing to speak entirely.</li>`;
+                else if (s.clammedNormal) notesHtml += `<li style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;"><span style="color:var(--accent-gold);">Status:</span> Annoyed. Will only speak if deeply insulted.</li>`;
+                
+                notesHtml += `</ul></div>`;
+
+                html = `<div class="card-header danger-text">GRAND ASSEMBLY (1/2)</div>
+                        <div class="card-title" style="color:${s.color}">${s.name}</div>
+                        <div class="card-body">
+                            <p class="desc-text">${s.role}</p>
+                            ${notesHtml}
+                            <p>Is this the killer? Select carefully.</p>
+                        </div>`;
+                
+                state.swipeActions.up = { text: "SELECT SUSPECT", action: () => { vib(20); state.tempAccused = s; generateCard('accuse_motive', 0); } };
                 state.swipeActions.left = { text: "Prev", action: () => generateCard('accuse_suspect', prevIdx) };
                 state.swipeActions.right = { text: "Next", action: () => generateCard('accuse_suspect', nextIdx) };
             }
@@ -687,7 +879,8 @@
                 }
             }
 
-            updatePersistentHints(); renderCardDOM(html);
+            updatePersistentHints();
+            renderCardDOM(html);
         }
 
         function doMoveSelect() { state.stats.moves++; generateCard('move_select'); }
@@ -764,62 +957,35 @@
             let text = "";
             if (!isDeep) {
                 state.stats.probes++;
-                s.gruntCount++;
                 
-                let clamChance = 0;
-                if (s.gruntCount === 3) clamChance = 0.50;
-                else if (s.gruntCount >= 4) clamChance = 1.0;
-
-                if (Math.random() < clamChance) {
-                    s.clammed = true;
-                    text = `<div class="dialogue">"I've answered enough of your tedious questions! Leave me alone!"</div><p class="danger-text">They cross their arms. Completely shut down.</p>`;
+                if (s.normalReveals >= 2) {
+                    s.clammedNormal = true; 
+                    AudioSys.playSnap();
+                    text = `<div class="dialogue">"I've answered enough of your tedious questions! I'm not saying another word to you unless you force it out of me!"</div><p class="danger-text">They cross their arms. Polite questioning is completely useless now.</p>`;
                 } else {
-                    let rand = Math.random();
-                    if (rand < 0.10 && s.isLying && !s.hasRevealedRealAlibi) {
-                        s.hasRevealedRealAlibi = true;
-                        text = `<p class="sys-text" style="color:var(--success-green); font-weight:bold;">LUCKY BREAK: They slipped up!</p><div class="dialogue">"${s.realAlibi}"</div>`;
-                    } else if (rand < 0.20 && !s.hasRevealedMotive) {
-                        s.hasRevealedMotive = true;
-                        text = `<p class="sys-text" style="color:var(--success-green); font-weight:bold;">SLIP OF THE TONGUE: Secret revealed!</p><div class="dialogue">"Alright, yes, ${s.motive} But I didn't kill him!"</div>`;
-                    } else if (rand < 0.35) {
-                        let others = state.suspects.filter(x => x !== s);
-                        let target = others[Math.floor(Math.random() * others.length)];
-                        target.hasRevealedMotive = true;
-                        text = `<p class="sys-text" style="color:var(--accent-gold); font-weight:bold;">VILLAGE GOSSIP OBTAINED.</p><div class="dialogue">"${s.lines.gossip} ${target.name.split(' ')[0]}. I know for a fact: ${target.motive}"</div>`;
-                    } else {
-                        text = `<p>Stetson adjusted his sandwich and grunted a question.</p><div class="dialogue">"${s.lines.deny1} ${s.initialAlibi}"</div>`;
-                    }
+                    let info = s.infoPool.pop();
+                    s.revealedData.push(info);
+                    s.normalReveals++;
+                    text = `<p>Stetson adjusted his sandwich and grunted a question.</p><div class="dialogue">"${info.text}"</div>`;
                 }
             } else {
-                state.stats.insults++; state.suspicion += 4; s.insultCount++; 
+                vib(50); state.stats.insults++; 
                 
-                if (s.insultCount > 2) {
-                    s.clammed = true; 
-                    text = `<p class="sys-text danger-text">WARNING: Pushed too far...</p><div class="dialogue">"You absolute monster! I'm not speaking to you ever again!"</div><p class="danger-text">They are completely shut down.</p>`;
-                } else if (s.insultCount === 1) {
-                    if (s.isLying && !s.hasRevealedRealAlibi) {
-                        s.hasRevealedRealAlibi = true; 
-                        text = `<p class="sys-text danger-text">WARNING: Hostility grows...</p><p>Stetson fired a volley of brutal insults until they cracked.</p><div class="dialogue">"${s.realAlibi}"</div>`;
-                    } else if (!s.hasRevealedMotive) {
-                        s.hasRevealedMotive = true; 
-                        text = `<p class="sys-text danger-text">WARNING: Hostility grows...</p><p>Stetson laid bare a deeply personal flaw.</p><div class="dialogue">"Fine! Yes! ${s.motive} But I am not a murderer!"</div>`;
-                    } else {
-                        text = `<p class="sys-text danger-text">WARNING: Hostility grows...</p><div class="dialogue">"I have already told you the absolute truth! Leave me alone, you madman!"</div>`;
-                    }
-                } else if (s.insultCount === 2) {
-                    if (!s.hasRevealedMotive) {
-                        s.hasRevealedMotive = true; 
-                        text = `<p class="sys-text danger-text">WARNING: Hostility grows...</p><p>Stetson laid bare a deeply personal flaw.</p><div class="dialogue">"Fine! Yes! ${s.motive} But I am not a murderer!"</div>`;
-                    } else {
-                        s.clammed = true; 
-                        text = `<p class="sys-text danger-text">WARNING: Pushed too far...</p><div class="dialogue">"${s.clam}"</div><p class="danger-text">They are completely shut down.</p>`;
-                    }
+                if (s.isMurderer) {
+                    state.suspicion += 12; 
+                    text = `<p class="sys-text danger-text">WARNING: The killer's paranoia spikes violently from your brutal, specific accusations!</p>`;
+                } else {
+                    state.suspicion += 4;
                 }
 
-                let witnesses = state.suspects.filter(other => other.roomId === s.roomId && other.name !== s.name && !other.clammed);
-                if (witnesses.length > 0) {
-                    witnesses.forEach(w => { w.gruntCount += 2; w.insultCount += 1; });
-                    text += `<p class="sys-text danger-text">CROWD MENTALITY: The other occupants are deeply disgusted by your abusive outburst. Their patience wears thin.</p>`;
+                if (s.deepReveals >= 2 || s.infoPool.length === 0) {
+                    s.clammed = true; AudioSys.playSnap();
+                    text += `<p class="sys-text danger-text">WARNING: Pushed too far...</p><div class="dialogue">"You absolute monster! I'm not speaking to you ever again!"</div><p class="danger-text">They are completely shut down.</p>`;
+                } else {
+                    let info = s.infoPool.pop();
+                    s.revealedData.push(info);
+                    s.deepReveals++;
+                    text += `<p class="sys-text danger-text">Stetson hurled a deeply personal insult.</p><div class="dialogue">"You vile pig! Fine! ${info.text}"</div>`;
                 }
             }
 
@@ -834,7 +1000,13 @@
 
         function doTakeWeapon(item) {
             state.hasWeapon = true; state.items = state.items.filter(i => i !== item); 
+            
             document.body.classList.add('jeopardy-active');
+            AudioSys.setHeartbeat(false);
+            
+            if (state.weaponTensionInterval) clearInterval(state.weaponTensionInterval);
+            state.weaponTensionInterval = setInterval(() => { vib([50, 40]); }, 300);
+
             advanceTurn(); 
             if(!state.gameOver) generateCard('room_idle'); 
         }
@@ -843,6 +1015,7 @@
             let killer = state.suspects.find(s => s.isMurderer);
             if (method === 'sandwich') {
                 state.sandwichBites--; state.stats.sandwichEaten++; state.stats.escapes++;
+                AudioSys.playSmack(); vib([50, 100, 50]);
                 let escapeRooms = theme.rooms.filter(r => r.id !== state.playerRoomId);
                 killer.roomId = escapeRooms[Math.floor(Math.random() * escapeRooms.length)].id;
                 state.triggerKillerCorner = false;
@@ -850,31 +1023,43 @@
             } else {
                 if (Math.random() < 0.3) {
                     state.stats.escapes++;
-                    let adjRooms = theme.rooms.filter(r => getGridDistance(state.playerRoomId, r.id) === 1);
-                    if(adjRooms.length === 0) adjRooms = theme.rooms;
+                    let adjRooms = theme.rooms.filter(r => getGridDistance(state.playerRoomId, r.id) === 1 && (!state.frictions[r.id] || state.inventory.includes(state.frictions[r.id].id)));
+                    if(adjRooms.length === 0) adjRooms = theme.rooms.filter(r=>!state.frictions[r.id] || state.inventory.includes(state.frictions[r.id].id));
                     state.playerRoomId = adjRooms[Math.floor(Math.random() * adjRooms.length)].id;
                     state.triggerKillerCorner = false;
                     generateCard('result_card', { title: "Narrow Escape", text: "Stetson threw his undersized cane at the killer's knees and blindly bolted into an adjacent room, gasping for breath."});
                 } else {
+                    AudioSys.setHeartbeat(false); vib([200, 50, 200]);
                     generateCard('result_card', { title: "CAUGHT", text: "Stetson tried to run, but his pathetic limp betrayed him. The killer caught him from behind. It was over.", isDeath: true });
                 }
             }
         }
 
         function doFinalAccusation(suspect, motive) {
+            if (state.weaponTensionInterval) clearInterval(state.weaponTensionInterval);
+            
             if (suspect.isMurderer && motive === suspect.motive) {
+                AudioSys.setHeartbeat(false);
                 generateCard('result_card', { title: "A MISERABLE SUCCESS", text: `Standing amidst the damp and the blood, Stetson dissected their lies with surgical precision. He presented the weapon and laid out the exact motive: "${motive}". ${suspect.name}'s facade shattered entirely. They fell to their knees. Case closed.`, isWin: true });
             } else if (suspect.isMurderer) {
                 state.stats.wrongAccusations++; state.suspicion = state.maxSuspicion; state.isHunted = true; suspect.clammed = true;
-                generateCard('result_card', { title: "RIGHT PERSON, WRONG REASON", text: `Stetson pointed his sandwich at ${suspect.name}. They scoffed. "You have the weapon, but your timeline is gibberish! I'd never do it for that reason!" Stetson is laughed out of the room. Hostility hits CRITICAL.`, isWin: false });
+                document.body.classList.add('shake'); setTimeout(()=>document.body.classList.remove('shake'), 500); AudioSys.playSnap();
+                
+                generateCard('result_card', { 
+                    title: "A FATAL MISCALCULATION", 
+                    text: `Stetson pointed his sandwich at ${suspect.name} and confidently declared, "${motive}"\n\n${suspect.name} stared at him for a long, heavy moment. Then, they began to sarcastically applaud.\n\nThey calmly stepped backward, locking the heavy oak door with a loud, final click. Pulling a heavy service pistol from their coat, they sighed. "Right person, completely wrong reason, Hinchfliffe. I suppose now I'll just have to murder all of you."`, 
+                    isDeath: true 
+                });
             } else {
                 state.stats.wrongAccusations++; state.suspicion = state.maxSuspicion; state.isHunted = true; suspect.clammed = true;
+                document.body.classList.add('shake'); setTimeout(()=>document.body.classList.remove('shake'), 500); AudioSys.playSnap();
                 generateCard('result_card', { title: "A MISERABLE BLUNDER", text: `Stetson accused the completely wrong person. They stared at him in disbelief and stormed out. Stetson is utterly humiliated. Hostility is CRITICAL. The true killer now knows Stetson is flailing, and they are hunting him.`, isWin: false });
             }
         }
 
         function endGame(isWin, desc) {
-            state.gameOver = true; document.body.classList.remove('jeopardy-active');
+            state.gameOver = true; document.body.classList.remove('jeopardy-active'); AudioSys.setHeartbeat(false);
+            if (state.weaponTensionInterval) { clearInterval(state.weaponTensionInterval); state.weaponTensionInterval = null; }
             
             let baseScore = isWin ? 1000 : 200;
             let pScore = Math.max(0, baseScore - (state.turns * 10) - (state.stats.wrongAccusations * 250) + ((3-state.sandwichBites) * 50) + (state.stats.escapes * 100));
@@ -912,8 +1097,20 @@
             const container = document.getElementById('card-container');
             let oldCard = document.getElementById('active-card');
             if (oldCard) oldCard.remove();
-            let card = document.createElement('div'); card.className = 'swipe-card'; card.id = 'active-card'; card.innerHTML = html;
-            container.appendChild(card); setupSwipe(card);
+            
+            let card = document.createElement('div'); 
+            card.className = 'swipe-card'; 
+            card.id = 'active-card'; 
+            
+            let stampsHtml = '';
+            if(state.swipeActions.up) stampsHtml += `<div class="swipe-stamp stamp-up" id="stamp-up">${state.swipeActions.up.text}</div>`;
+            if(state.swipeActions.down) stampsHtml += `<div class="swipe-stamp stamp-down" id="stamp-down">${state.swipeActions.down.text}</div>`;
+            if(state.swipeActions.left) stampsHtml += `<div class="swipe-stamp stamp-left" id="stamp-left">${state.swipeActions.left.text}</div>`;
+            if(state.swipeActions.right) stampsHtml += `<div class="swipe-stamp stamp-right" id="stamp-right">${state.swipeActions.right.text}</div>`;
+
+            card.innerHTML = html + stampsHtml;
+            container.appendChild(card); 
+            setupSwipe(card);
         }
 
         function setupSwipe(card) {
@@ -922,14 +1119,32 @@
             const { signal } = currentSwipeController;
 
             let startX = 0, startY = 0; let isDragging = false; const threshold = 100; 
-            const hints = { up: document.getElementById('hint-up'), down: document.getElementById('hint-down'), left: document.getElementById('hint-left'), right: document.getElementById('hint-right') };
+
+            const stampRight = card.querySelector('#stamp-right');
+            const stampLeft = card.querySelector('#stamp-left');
+            const stampUp = card.querySelector('#stamp-up');
+            const stampDown = card.querySelector('#stamp-down');
+
+            const edgeHints = { 
+                up: document.getElementById('hint-up'), 
+                down: document.getElementById('hint-down'), 
+                left: document.getElementById('hint-left'), 
+                right: document.getElementById('hint-right') 
+            };
 
             function updateHintVisuals(dx, dy) {
-                Object.values(hints).forEach(h => h.classList.remove('highlight'));
+                if(stampRight) stampRight.style.opacity = Math.max(0, dx / 100);
+                if(stampLeft) stampLeft.style.opacity = Math.max(0, -dx / 100);
+                if(stampDown) stampDown.style.opacity = Math.max(0, dy / 100);
+                if(stampUp) stampUp.style.opacity = Math.max(0, -dy / 100);
+
+                Object.values(edgeHints).forEach(h => { if(h) h.classList.remove('highlight'); });
                 if (Math.abs(dx) > Math.abs(dy)) { 
-                    if (dx > 20 && state.swipeActions.right) hints.right.classList.add('highlight'); else if (dx < -20 && state.swipeActions.left) hints.left.classList.add('highlight');
+                    if (dx > 20 && state.swipeActions.right && edgeHints.right) edgeHints.right.classList.add('highlight'); 
+                    else if (dx < -20 && state.swipeActions.left && edgeHints.left) edgeHints.left.classList.add('highlight');
                 } else { 
-                    if (dy > 20 && state.swipeActions.down) hints.down.classList.add('highlight'); else if (dy < -20 && state.swipeActions.up) hints.up.classList.add('highlight');
+                    if (dy > 20 && state.swipeActions.down && edgeHints.down) edgeHints.down.classList.add('highlight'); 
+                    else if (dy < -20 && state.swipeActions.up && edgeHints.up) edgeHints.up.classList.add('highlight');
                 }
             }
 
@@ -944,11 +1159,17 @@
                 }
 
                 if (actionToTake) {
+                    vib(10);
                     card.style.transition = 'transform 0.3s ease-out'; card.style.transform = `translate(${throwX}px, ${throwY}px) rotate(${throwX * 0.05}deg)`;
-                    Object.values(hints).forEach(h => h.classList.remove('highlight')); setTimeout(() => triggerAction(actionToTake), 300); 
+                    Object.values(edgeHints).forEach(h => { if(h) h.classList.remove('highlight'); }); 
+                    setTimeout(() => triggerAction(actionToTake), 300); 
                 } else {
                     card.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'; card.style.transform = 'translate(0px, 0px) rotate(0deg)';
-                    Object.values(hints).forEach(h => h.classList.remove('highlight'));
+                    Object.values(edgeHints).forEach(h => { if(h) h.classList.remove('highlight'); });
+                    if(stampRight) stampRight.style.opacity = 0;
+                    if(stampLeft) stampLeft.style.opacity = 0;
+                    if(stampDown) stampDown.style.opacity = 0;
+                    if(stampUp) stampUp.style.opacity = 0;
                 }
             }
 
